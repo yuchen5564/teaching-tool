@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二進位加法模擬器</title>
+    <!-- 引入 Tailwind CSS 以快速排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 font-sans p-4 md:p-8 flex items-center justify-center">
+
+    <div class="max-w-4xl w-full bg-white rounded-3xl shadow-xl p-6 md:p-10 border border-slate-100 animate-fadeIn">
+        
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-blue-700 mb-2">
+                🚀 二進制
+            </h1>
+        </header>
+
+        <!-- Info Box -->
+        <div class="bg-blue-50 text-blue-800 p-4 rounded-xl mb-8 flex items-start w-full">
+            <svg class="mr-3 shrink-0 mt-1" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <div>
+                <h3 class="font-bold text-lg mb-1">規則只有一個：逢二進位！</h3>
+                <p>
+                    我們平常數數字是「逢十進位」(9+1=10)。<br />
+                    但在二進位裡只有 0 和 1，所以 <strong>1 + 1 不能寫 2，必須寫 0 並往前「進 1」</strong>，變成 <strong>10</strong>。<br />
+                    試著按下「加 1」按鈕，觀察進位的連鎖反應！
+                </p>
+            </div>
+        </div>
+
+        <!-- Interactive Area -->
+        <div class="flex flex-col md:flex-row gap-8 items-center justify-center w-full">
+            
+            <!-- Controls Panel -->
+            <div class="flex flex-col items-center p-6 bg-slate-50 rounded-2xl border border-slate-200 w-full md:w-auto">
+                <div class="text-slate-500 font-bold mb-2">目前數字 (十進位)</div>
+                <div id="decimal-count" class="text-6xl font-black text-slate-800 mb-6">0</div>
+                
+                <button id="add-btn" onclick="handleAdd()" class="flex items-center justify-center w-40 h-16 rounded-xl font-bold text-xl shadow-lg transition-transform bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105 active:scale-95">
+                    <svg class="mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    再加 1
+                </button>
+                
+                <p id="limit-msg" class="text-red-500 text-sm mt-3 font-bold hidden">4 個位元已滿！</p>
+
+                <button onclick="handleReset()" class="mt-4 text-slate-400 hover:text-slate-600 flex items-center text-sm transition-colors">
+                    <svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                    </svg>
+                    重新開始
+                </button>
+            </div>
+
+            <!-- Arrow -->
+            <svg class="hidden md:block text-slate-300 w-12 h-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+
+            <!-- Visual Addition Area -->
+            <div class="p-8 bg-slate-800 text-white rounded-3xl shadow-2xl font-mono text-3xl md:text-5xl font-black tracking-widest relative">
+                
+                <!-- Legend -->
+                <div class="absolute -top-3 left-4 bg-red-500 text-white text-xs px-2 py-1 rounded-md tracking-normal font-sans shadow-md">
+                    紅色小字代表進位
+                </div>
+
+                <!-- Carries Row -->
+                <div class="flex justify-end text-red-400 text-lg md:text-2xl h-8 mb-2 opacity-80" id="carries-row">
+                    <span id="overflow-carry" class="mr-2 hidden">1</span>
+                    <span id="carry-0" class="w-[1ch] text-center"> </span>
+                    <span id="carry-1" class="w-[1ch] text-center"> </span>
+                    <span id="carry-2" class="w-[1ch] text-center"> </span>
+                    <span id="carry-3" class="w-[1ch] text-center"> </span>
+                </div>
+
+                <!-- Operand 1 (Current Count) -->
+                <div class="flex justify-end text-blue-300 mb-2">
+                    <span id="overflow-op1" class="mr-2 opacity-0 hidden">0</span>
+                    <span id="op1-0" class="w-[1ch] text-center">0</span>
+                    <span id="op1-1" class="w-[1ch] text-center">0</span>
+                    <span id="op1-2" class="w-[1ch] text-center">0</span>
+                    <span id="op1-3" class="w-[1ch] text-center">0</span>
+                </div>
+
+                <!-- Operand 2 (+1) -->
+                <div class="flex justify-end text-emerald-400 mb-2 items-center">
+                    <span class="mr-4 text-slate-400 text-3xl">+</span>
+                    <span id="overflow-op2" class="mr-2 opacity-0 hidden">0</span>
+                    <span id="op2-0" class="w-[1ch] text-center">0</span>
+                    <span id="op2-1" class="w-[1ch] text-center">0</span>
+                    <span id="op2-2" class="w-[1ch] text-center">0</span>
+                    <span id="op2-3" class="w-[1ch] text-center">1</span>
+                </div>
+
+                <hr class="border-slate-500 border-t-4 mb-4" />
+
+                <!-- Sum (Next Count) -->
+                <div class="flex justify-end text-amber-300">
+                    <span id="overflow-sum" class="mr-2 text-red-400 hidden animate-bounce">1</span>
+                    <span id="sum-0" class="w-[1ch] text-center">0</span>
+                    <span id="sum-1" class="w-[1ch] text-center">0</span>
+                    <span id="sum-2" class="w-[1ch] text-center">0</span>
+                    <span id="sum-3" class="w-[1ch] text-center">0</span>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- Explanation Box -->
+        <div class="mt-10 mx-auto bg-white border-2 border-slate-200 p-6 rounded-xl w-full max-w-2xl text-center">
+            <h4 class="text-slate-500 font-bold mb-4">小抄本：二進位加法規則</h4>
+            <div class="flex flex-wrap justify-center gap-4 md:gap-8 text-lg font-mono text-slate-700">
+                <div class="bg-slate-100 px-4 py-2 rounded-lg">0+0 = <strong class="text-blue-600">0</strong></div>
+                <div class="bg-slate-100 px-4 py-2 rounded-lg">0+1 = <strong class="text-blue-600">1</strong></div>
+                <div class="bg-red-50 border-2 border-red-200 px-4 py-2 rounded-lg text-red-800 flex items-center">
+                    <span>1+1 = <strong class="text-red-600 text-2xl">10</strong></span>
+                    <span class="text-sm font-sans text-red-500 ml-2">(寫0進1)</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let count = 0;
+
+        // 輔助函式：將數字轉為長度為 4 的二進位陣列
+        function toBinaryArray(num) {
+            return num.toString(2).padStart(4, '0').split('').map(Number);
+        }
+
+        // 更新 UI 的核心函式
+        function updateUI() {
+            // 1. 更新十進位數字顯示
+            document.getElementById('decimal-count').innerText = count;
+
+            // 2. 處理按鈕狀態
+            const addBtn = document.getElementById('add-btn');
+            const limitMsg = document.getElementById('limit-msg');
+            
+            if (count >= 15) {
+                addBtn.disabled = true;
+                addBtn.className = "flex items-center justify-center w-40 h-16 rounded-xl font-bold text-xl shadow-lg transition-transform bg-slate-300 text-slate-500 cursor-not-allowed";
+                limitMsg.classList.remove('hidden');
+            } else {
+                addBtn.disabled = false;
+                addBtn.className = "flex items-center justify-center w-40 h-16 rounded-xl font-bold text-xl shadow-lg transition-transform bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105 active:scale-95";
+                limitMsg.classList.add('hidden');
+            }
+
+            // 3. 計算二進位與進位
+            const arr1 = toBinaryArray(count);
+            const arr2 = toBinaryArray(1);
+            
+            let carries = [0, 0, 0, 0];
+            let sums = [0, 0, 0, 0];
+            let c = 0;
+            
+            for (let i = 3; i >= 0; i--) {
+                let s = arr1[i] + arr2[i] + c;
+                sums[i] = s % 2;
+                c = Math.floor(s / 2);
+                if (i > 0) carries[i - 1] = c;
+            }
+            const hasOverflow = c > 0;
+
+            // 4. 渲染溢位 (滿 15 時的第 5 個位元)
+            const overflowIds = ['overflow-carry', 'overflow-op1', 'overflow-op2', 'overflow-sum'];
+            overflowIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (hasOverflow) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // 5. 渲染每一個位元的數字
+            for (let i = 0; i < 4; i++) {
+                // 進位 (有進位顯示 1，沒有顯示空白)
+                document.getElementById(`carry-${i}`).innerText = carries[i] > 0 ? '1' : ' ';
+                // 被加數 (目前數字)
+                document.getElementById(`op1-${i}`).innerText = arr1[i];
+                // 加數 (固定是 +1，前面補 0)
+                document.getElementById(`op2-${i}`).innerText = arr2[i];
+                
+                // 總和
+                const sumEl = document.getElementById(`sum-${i}`);
+                sumEl.innerText = sums[i];
+
+                // 動畫效果：如果有發生改變，且不是溢位狀態，就閃爍提示
+                if (arr1[i] !== sums[i] && !hasOverflow) {
+                    sumEl.classList.add('text-amber-200', 'animate-pulse');
+                    sumEl.classList.remove('text-amber-300');
+                } else {
+                    sumEl.classList.remove('text-amber-200', 'animate-pulse');
+                    sumEl.classList.add('text-amber-300');
+                }
+            }
+        }
+
+        // 按鈕事件：加 1
+        function handleAdd() {
+            if (count < 15) {
+                count++;
+                updateUI();
+            }
+        }
+
+        // 按鈕事件：重新開始
+        function handleReset() {
+            count = 0;
+            updateUI();
+        }
+
+        // 網頁載入時先執行一次初始化畫面
+        updateUI();
+    </script>
+</body>
+</html>

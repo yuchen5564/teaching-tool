@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>創用CC × 二進制探索器</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes highlightRow {
+            0% { background-color: #fef08a; } /* bg-yellow-200 */
+            100% { background-color: transparent; }
+        }
+        .animate-highlight {
+            animation: highlightRow 1.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-800 font-sans p-4 md:p-8 flex items-start justify-center">
+
+    <div class="max-w-5xl w-full bg-white rounded-3xl shadow-xl p-6 md:p-10 border border-slate-100 animate-fadeIn">
+        
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-blue-700 mb-2">
+                🧩 創用CC × 二進位：授權密碼破解
+            </h1>
+            <p class="text-slate-600 text-lg">逢二進位 (1+1=10) 能變出多少種授權組合？</p>
+        </header>
+
+        <!-- Info Box -->
+        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-5 rounded-xl mb-8 flex flex-col md:flex-row items-start w-full gap-4">
+            <div class="shrink-0 mt-1 bg-amber-100 p-2 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-600">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-xl mb-2">暖身任務：找出所有排列組合！</h3>
+                <p class="leading-relaxed">
+                    創用 CC 有四種標章：<strong>BY (姓名標示)</strong>、<strong>NC (非商業性)</strong>、<strong>ND (禁止改作)</strong>、<strong>SA (相同方式分享)</strong>。<br />
+                    在二進位的世界裡，<strong class="text-emerald-600">1 代表「有使用」</strong>，<strong class="text-slate-400">0 代表「沒使用」</strong>。<br />
+                    試著不斷按下「再加 1」，觀察逢二進位的規則如何幫我們窮舉出所有的授權組合！
+                </p>
+            </div>
+        </div>
+
+        <!-- Interactive Area (Top Half) -->
+        <div class="flex flex-col lg:flex-row gap-8 items-center justify-center w-full mb-10">
+            
+            <!-- Controls & CC Status -->
+            <div class="flex flex-col w-full lg:w-1/2 gap-4">
+                <!-- CC Badges Visualizer -->
+                <div class="bg-slate-100 p-4 rounded-2xl border border-slate-200 flex justify-between gap-2 text-center">
+                    <div id="badge-by" class="flex-1 flex flex-col items-center p-3 rounded-xl transition-all duration-300">
+                        <span class="font-black text-xl mb-1">BY</span>
+                        <span class="text-xs font-bold">姓名標示</span>
+                        <span id="state-by" class="mt-2 text-sm font-mono bg-white px-2 py-1 rounded shadow-sm">0</span>
+                    </div>
+                    <div id="badge-nc" class="flex-1 flex flex-col items-center p-3 rounded-xl transition-all duration-300">
+                        <span class="font-black text-xl mb-1">NC</span>
+                        <span class="text-xs font-bold">非商業性</span>
+                        <span id="state-nc" class="mt-2 text-sm font-mono bg-white px-2 py-1 rounded shadow-sm">0</span>
+                    </div>
+                    <div id="badge-nd" class="flex-1 flex flex-col items-center p-3 rounded-xl transition-all duration-300">
+                        <span class="font-black text-xl mb-1">ND</span>
+                        <span class="text-xs font-bold">禁止改作</span>
+                        <span id="state-nd" class="mt-2 text-sm font-mono bg-white px-2 py-1 rounded shadow-sm">0</span>
+                    </div>
+                    <div id="badge-sa" class="flex-1 flex flex-col items-center p-3 rounded-xl transition-all duration-300">
+                        <span class="font-black text-xl mb-1">SA</span>
+                        <span class="text-xs font-bold">相同分享</span>
+                        <span id="state-sa" class="mt-2 text-sm font-mono bg-white px-2 py-1 rounded shadow-sm">0</span>
+                    </div>
+                </div>
+
+                <!-- Add Button Panel -->
+                <div class="flex flex-col items-center p-6 bg-white rounded-2xl border-2 border-slate-200 shadow-sm relative overflow-hidden">
+                    <div class="absolute -right-6 -top-6 text-slate-50 opacity-50">
+                        <svg width="150" height="150" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2z"/></svg>
+                    </div>
+                    <div class="text-slate-500 font-bold mb-1 relative z-10">目前十進位數字</div>
+                    <div id="decimal-count" class="text-5xl font-black text-blue-600 mb-4 relative z-10">0</div>
+                    
+                    <button id="add-btn" onclick="handleAdd()" class="flex items-center justify-center w-full max-w-[200px] h-14 rounded-xl font-bold text-xl shadow-md transition-transform bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105 active:scale-95 relative z-10">
+                        <svg class="mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        再加 1
+                    </button>
+                    
+                    <p id="limit-msg" class="text-red-500 text-sm mt-3 font-bold hidden relative z-10">已找出全部 16 種組合！</p>
+                    <button onclick="handleReset()" class="mt-3 text-slate-400 hover:text-slate-600 flex items-center text-sm transition-colors relative z-10">
+                        <svg class="mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                            <path d="M3 3v5h5"></path>
+                        </svg>
+                        重新開始
+                    </button>
+                </div>
+            </div>
+
+            <!-- Visual Addition Area -->
+            <div class="w-full lg:w-1/2 p-6 md:p-8 bg-slate-800 text-white rounded-3xl shadow-xl font-mono text-3xl md:text-4xl font-black relative overflow-hidden">
+                <!-- Decorative background elements -->
+                <div class="absolute top-0 right-0 p-4 opacity-10 font-sans text-xs">BINARY ADDER v2.0</div>
+                
+                <div class="absolute -top-3 left-4 bg-red-500 text-white text-xs px-2 py-1 rounded-md tracking-normal font-sans shadow-md z-10">
+                    紅色代表進位 (寫0進1)
+                </div>
+
+                <!-- Labels Row (Above numbers) -->
+                <div class="flex justify-end text-slate-400 text-sm md:text-base font-sans font-bold mb-2 pr-2">
+                    <span class="w-10 md:w-14 text-center">BY</span>
+                    <span class="w-10 md:w-14 text-center">NC</span>
+                    <span class="w-10 md:w-14 text-center">ND</span>
+                    <span class="w-10 md:w-14 text-center">SA</span>
+                </div>
+
+                <!-- Carries Row -->
+                <div class="flex justify-end text-red-400 text-lg md:text-2xl h-8 mb-1 opacity-90 pr-2" id="carries-row">
+                    <span id="overflow-carry" class="mr-2 hidden">1</span>
+                    <span id="carry-0" class="w-10 md:w-14 text-center"> </span>
+                    <span id="carry-1" class="w-10 md:w-14 text-center"> </span>
+                    <span id="carry-2" class="w-10 md:w-14 text-center"> </span>
+                    <span id="carry-3" class="w-10 md:w-14 text-center"> </span>
+                </div>
+
+                <!-- Operand 1 (Current Count) -->
+                <div class="flex justify-end text-blue-300 mb-2 pr-2 items-center">
+                    <span class="mr-auto text-slate-500 text-xl font-sans opacity-50 ml-2">目前</span>
+                    <span id="overflow-op1" class="mr-2 opacity-0 hidden">0</span>
+                    <span id="op1-0" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op1-1" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op1-2" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op1-3" class="w-10 md:w-14 text-center">0</span>
+                </div>
+
+                <!-- Operand 2 (+1) -->
+                <div class="flex justify-end text-emerald-400 mb-2 pr-2 items-center">
+                    <span class="mr-auto text-slate-500 text-3xl">+</span>
+                    <span id="overflow-op2" class="mr-2 opacity-0 hidden">0</span>
+                    <span id="op2-0" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op2-1" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op2-2" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op2-3" class="w-10 md:w-14 text-center">1</span>
+                </div>
+
+                <hr class="border-slate-500 border-t-2 mb-4" />
+
+                <!-- Sum (Next Count) -->
+                <div class="flex justify-end text-amber-300 pr-2 items-center">
+                    <span class="mr-auto text-slate-500 text-xl font-sans opacity-50 ml-2">結果</span>
+                    <span id="overflow-sum" class="mr-2 text-red-400 hidden animate-bounce">1</span>
+                    <span id="sum-0" class="w-10 md:w-14 text-center">0</span>
+                    <span id="sum-1" class="w-10 md:w-14 text-center">0</span>
+                    <span id="sum-2" class="w-10 md:w-14 text-center">0</span>
+                    <span id="sum-3" class="w-10 md:w-14 text-center">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Table Area (Bottom Half) -->
+        <div class="mt-8 border-t-2 border-slate-100 pt-8">
+            <div class="flex justify-between items-end mb-4">
+                <h4 class="text-xl font-bold text-slate-700 flex items-center">
+                    <svg class="mr-2 text-blue-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    排列組合記錄表
+                </h4>
+                <span class="text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">已記錄 <span id="record-count" class="text-blue-600 font-bold">1</span> / 16</span>
+            </div>
+            
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                <table class="w-full text-center text-sm md:text-base">
+                    <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 font-bold">
+                        <tr>
+                            <th class="py-3 px-2 w-16 text-slate-400 font-normal">順序</th>
+                            <th class="py-3 px-4 border-r border-slate-200">十進位</th>
+                            <th class="py-3 px-2 w-16">BY<br/><span class="text-xs font-normal text-slate-500">姓名標示</span></th>
+                            <th class="py-3 px-2 w-16">NC<br/><span class="text-xs font-normal text-slate-500">非商業性</span></th>
+                            <th class="py-3 px-2 w-16">ND<br/><span class="text-xs font-normal text-slate-500">禁止改作</span></th>
+                            <th class="py-3 px-2 w-16 border-r border-slate-200">SA<br/><span class="text-xs font-normal text-slate-500">相同分享</span></th>
+                            <th class="py-3 px-4 text-blue-600">二進位密碼</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-tbody" class="divide-y divide-slate-100 bg-white font-mono">
+                        <!-- Table rows will be inserted here by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let count = 0;
+
+        // 將數字轉為長度為 4 的二進位字串陣列
+        function toBinaryArray(num) {
+            return num.toString(2).padStart(4, '0').split('').map(Number);
+        }
+
+        // 渲染徽章狀態 (CC 標章視覺化)
+        function renderBadges(arr) {
+            const badges = [
+                { id: 'badge-by', stateId: 'state-by', activeClass: 'bg-blue-100 text-blue-700 border-2 border-blue-400', inactiveClass: 'bg-slate-50 text-slate-300 border-2 border-slate-100' },
+                { id: 'badge-nc', stateId: 'state-nc', activeClass: 'bg-orange-100 text-orange-700 border-2 border-orange-400', inactiveClass: 'bg-slate-50 text-slate-300 border-2 border-slate-100' },
+                { id: 'badge-nd', stateId: 'state-nd', activeClass: 'bg-emerald-100 text-emerald-700 border-2 border-emerald-400', inactiveClass: 'bg-slate-50 text-slate-300 border-2 border-slate-100' },
+                { id: 'badge-sa', stateId: 'state-sa', activeClass: 'bg-purple-100 text-purple-700 border-2 border-purple-400', inactiveClass: 'bg-slate-50 text-slate-300 border-2 border-slate-100' }
+            ];
+
+            arr.forEach((bit, index) => {
+                const badgeEl = document.getElementById(badges[index].id);
+                const stateEl = document.getElementById(badges[index].stateId);
+                
+                // Reset classes
+                badgeEl.className = `flex-1 flex flex-col items-center p-3 rounded-xl transition-all duration-300 shadow-sm ${bit === 1 ? badges[index].activeClass : badges[index].inactiveClass}`;
+                
+                // Update small text (0 or 1)
+                stateEl.innerText = bit;
+                if(bit === 1) {
+                    stateEl.classList.remove('text-slate-400');
+                    stateEl.classList.add('text-slate-800', 'font-black');
+                } else {
+                    stateEl.classList.remove('text-slate-800', 'font-black');
+                    stateEl.classList.add('text-slate-400');
+                }
+            });
+        }
+
+        // 渲染表格歷史記錄
+        function renderTable() {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = ''; // 清空重新渲染
+
+            for (let i = 0; i <= count; i++) {
+                const arr = toBinaryArray(i);
+                const tr = document.createElement('tr');
+                
+                // 如果是最新的一筆，加上閃爍高光特效
+                if (i === count && count > 0) {
+                    tr.className = "animate-highlight hover:bg-slate-50 transition-colors";
+                } else {
+                    tr.className = "hover:bg-slate-50 transition-colors";
+                }
+
+                // 將 0/1 轉為視覺化的圓點或文字，讓學生更好懂
+                const formatCell = (bit, isGreen) => bit === 1 
+                    ? `<span class="inline-block w-6 h-6 rounded-full bg-${isGreen ? 'emerald' : 'blue'}-100 text-${isGreen ? 'emerald' : 'blue'}-700 font-bold leading-6">1</span>` 
+                    : `<span class="text-slate-300">0</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-2 text-slate-400 font-sans text-xs">${i + 1}</td>
+                    <td class="py-2 font-black text-slate-700 border-r border-slate-100">${i}</td>
+                    <td class="py-2">${formatCell(arr[0], false)}</td>
+                    <td class="py-2">${formatCell(arr[1], false)}</td>
+                    <td class="py-2">${formatCell(arr[2], false)}</td>
+                    <td class="py-2 border-r border-slate-100">${formatCell(arr[3], false)}</td>
+                    <td class="py-2 font-black text-blue-600 tracking-widest">${arr.join('')}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            // 更新記錄數量顯示
+            document.getElementById('record-count').innerText = count + 1;
+        }
+
+        // 更新 UI 的核心函式 (加法器運算邏輯)
+        function updateAdditionLogic() {
+            document.getElementById('decimal-count').innerText = count;
+
+            const addBtn = document.getElementById('add-btn');
+            const limitMsg = document.getElementById('limit-msg');
+            
+            if (count >= 15) {
+                addBtn.disabled = true;
+                addBtn.className = "flex items-center justify-center w-full max-w-[200px] h-14 rounded-xl font-bold text-xl shadow-inner transition-transform bg-slate-200 text-slate-400 cursor-not-allowed relative z-10";
+                limitMsg.classList.remove('hidden');
+            } else {
+                addBtn.disabled = false;
+                addBtn.className = "flex items-center justify-center w-full max-w-[200px] h-14 rounded-xl font-bold text-xl shadow-md transition-transform bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105 active:scale-95 relative z-10";
+                limitMsg.classList.add('hidden');
+            }
+
+            const arr1 = toBinaryArray(count);
+            const arr2 = toBinaryArray(1);
+            
+            // 更新 CC 標章視覺圖
+            renderBadges(arr1);
+            
+            let carries = [0, 0, 0, 0];
+            let sums = [0, 0, 0, 0];
+            let c = 0;
+            
+            for (let i = 3; i >= 0; i--) {
+                let s = arr1[i] + arr2[i] + c;
+                sums[i] = s % 2;
+                c = Math.floor(s / 2);
+                if (i > 0) carries[i - 1] = c;
+            }
+            const hasOverflow = c > 0;
+
+            const overflowIds = ['overflow-carry', 'overflow-op1', 'overflow-op2', 'overflow-sum'];
+            overflowIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (hasOverflow) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`carry-${i}`).innerText = carries[i] > 0 ? '1' : ' ';
+                document.getElementById(`op1-${i}`).innerText = arr1[i];
+                document.getElementById(`op2-${i}`).innerText = arr2[i];
+                
+                const sumEl = document.getElementById(`sum-${i}`);
+                sumEl.innerText = sums[i];
+
+                if (arr1[i] !== sums[i] && !hasOverflow) {
+                    sumEl.classList.add('text-amber-200', 'animate-pulse');
+                    sumEl.classList.remove('text-amber-300');
+                } else {
+                    sumEl.classList.remove('text-amber-200', 'animate-pulse');
+                    sumEl.classList.add('text-amber-300');
+                }
+            }
+        }
+
+        // 按鈕事件：加 1
+        function handleAdd() {
+            if (count < 15) {
+                count++;
+                updateAdditionLogic();
+                renderTable();
+            }
+        }
+
+        // 按鈕事件：重新開始
+        function handleReset() {
+            count = 0;
+            updateAdditionLogic();
+            renderTable();
+        }
+
+        // 網頁載入時初始化
+        window.onload = () => {
+            updateAdditionLogic();
+            renderTable();
+        };
+    </script>
+</body>
+</html>
