@@ -78,7 +78,8 @@
             </svg>
 
             <!-- Visual Addition Area -->
-            <div class="p-8 bg-slate-800 text-white rounded-3xl shadow-2xl font-mono text-3xl md:text-5xl font-black tracking-widest relative">
+            <!-- 移除了 tracking-widest，改由固定的寬度來支撐每個數字的間距 -->
+            <div class="p-8 bg-slate-800 text-white rounded-3xl shadow-2xl font-mono text-3xl md:text-5xl font-black relative">
                 
                 <!-- Legend -->
                 <div class="absolute -top-3 left-4 bg-red-500 text-white text-xs px-2 py-1 rounded-md tracking-normal font-sans shadow-md">
@@ -86,42 +87,43 @@
                 </div>
 
                 <!-- Carries Row -->
+                <!-- 使用 w-10 md:w-14 讓寬度固定，確保每一列對齊 -->
                 <div class="flex justify-end text-red-400 text-lg md:text-2xl h-8 mb-2 opacity-80" id="carries-row">
-                    <span id="overflow-carry" class="mr-2 hidden">1</span>
-                    <span id="carry-0" class="w-[1ch] text-center"> </span>
-                    <span id="carry-1" class="w-[1ch] text-center"> </span>
-                    <span id="carry-2" class="w-[1ch] text-center"> </span>
-                    <span id="carry-3" class="w-[1ch] text-center"> </span>
+                    <span id="overflow-carry" class="w-10 md:w-14 text-center hidden">1</span>
+                    <span id="carry-0" class="w-10 md:w-14 text-center"> </span>
+                    <span id="carry-1" class="w-10 md:w-14 text-center"> </span>
+                    <span id="carry-2" class="w-10 md:w-14 text-center"> </span>
+                    <span id="carry-3" class="w-10 md:w-14 text-center"> </span>
                 </div>
 
                 <!-- Operand 1 (Current Count) -->
                 <div class="flex justify-end text-blue-300 mb-2">
-                    <span id="overflow-op1" class="mr-2 opacity-0 hidden">0</span>
-                    <span id="op1-0" class="w-[1ch] text-center">0</span>
-                    <span id="op1-1" class="w-[1ch] text-center">0</span>
-                    <span id="op1-2" class="w-[1ch] text-center">0</span>
-                    <span id="op1-3" class="w-[1ch] text-center">0</span>
+                    <span id="overflow-op1" class="w-10 md:w-14 text-center opacity-0 hidden">0</span>
+                    <span id="op1-0" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op1-1" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op1-2" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op1-3" class="w-10 md:w-14 text-center">0</span>
                 </div>
 
                 <!-- Operand 2 (+1) -->
                 <div class="flex justify-end text-emerald-400 mb-2 items-center">
                     <span class="mr-4 text-slate-400 text-3xl">+</span>
-                    <span id="overflow-op2" class="mr-2 opacity-0 hidden">0</span>
-                    <span id="op2-0" class="w-[1ch] text-center">0</span>
-                    <span id="op2-1" class="w-[1ch] text-center">0</span>
-                    <span id="op2-2" class="w-[1ch] text-center">0</span>
-                    <span id="op2-3" class="w-[1ch] text-center">1</span>
+                    <span id="overflow-op2" class="w-10 md:w-14 text-center opacity-0 hidden">0</span>
+                    <span id="op2-0" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op2-1" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op2-2" class="w-10 md:w-14 text-center">0</span>
+                    <span id="op2-3" class="w-10 md:w-14 text-center">1</span>
                 </div>
 
                 <hr class="border-slate-500 border-t-4 mb-4" />
 
                 <!-- Sum (Next Count) -->
                 <div class="flex justify-end text-amber-300">
-                    <span id="overflow-sum" class="mr-2 text-red-400 hidden animate-bounce">1</span>
-                    <span id="sum-0" class="w-[1ch] text-center">0</span>
-                    <span id="sum-1" class="w-[1ch] text-center">0</span>
-                    <span id="sum-2" class="w-[1ch] text-center">0</span>
-                    <span id="sum-3" class="w-[1ch] text-center">0</span>
+                    <span id="overflow-sum" class="w-10 md:w-14 text-center text-red-400 hidden animate-bounce">1</span>
+                    <span id="sum-0" class="w-10 md:w-14 text-center">0</span>
+                    <span id="sum-1" class="w-10 md:w-14 text-center">0</span>
+                    <span id="sum-2" class="w-10 md:w-14 text-center">0</span>
+                    <span id="sum-3" class="w-10 md:w-14 text-center">0</span>
                 </div>
 
             </div>
