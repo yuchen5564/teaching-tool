@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>創用 CC 圖片授權標記工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自訂一些基本的動畫與樣式 */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        #canvas-container {
+            background-image: repeating-linear-gradient(45deg, #f3f4f6 25%, transparent 25%, transparent 75%, #f3f4f6 75%, #f3f4f6), repeating-linear-gradient(45deg, #f3f4f6 25%, #ffffff 25%, #ffffff 75%, #f3f4f6 75%, #f3f4f6);
+            background-position: 0 0, 10px 10px;
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- 標題區塊 -->
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">創用 CC 圖片授權標記工具</h1>
+            <p class="text-gray-600">為您的攝影作品快速加上 Creative Commons 授權浮水印，保護您的創作。</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            
+            <!-- 左側：控制面板 -->
+            <div class="w-full lg:w-1/3 glass-panel rounded-2xl shadow-xl p-6 border border-gray-200 h-fit">
+                <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 Z"/></svg>
+                    設定授權資訊
+                </h2>
+
+                <!-- 圖片上傳 -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">1. 上傳照片</label>
+                    <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors group">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg class="w-8 h-8 mb-3 text-gray-400 group-hover:text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">點擊上傳</span> 或拖曳圖片至此</p>
+                            <p class="text-xs text-gray-500">支援 JPG, PNG, WEBP</p>
+                        </div>
+                        <input id="imageUpload" type="file" class="hidden" accept="image/*" />
+                    </label>
+                </div>
+
+                <!-- 授權選項 -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">2. 選擇創用 CC 授權條款</label>
+                    <select id="ccLicense" class="w-full rounded-lg border-gray-300 border p-2.5 text-sm focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <option value="CC BY 4.0">CC BY 4.0 (姓名標示)</option>
+                        <option value="CC BY-SA 4.0">CC BY-SA 4.0 (姓名標示-相同方式分享)</option>
+                        <option value="CC BY-ND 4.0">CC BY-ND 4.0 (姓名標示-禁止改作)</option>
+                        <option value="CC BY-NC 4.0">CC BY-NC 4.0 (姓名標示-非商業性)</option>
+                        <option value="CC BY-NC-SA 4.0">CC BY-NC-SA 4.0 (姓名標示-非商業性-相同方式分享)</option>
+                        <option value="CC BY-NC-ND 4.0">CC BY-NC-ND 4.0 (姓名標示-非商業性-禁止改作)</option>
+                        <option value="CC0 1.0">CC0 1.0 (公眾領域貢獻宣告)</option>
+                    </select>
+                </div>
+
+                <!-- 作者資訊 -->
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">作者名稱 (選填)</label>
+                        <input type="text" id="authorName" placeholder="例如：張三" class="w-full rounded-lg border-gray-300 border p-2.5 text-sm outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">年份 (選填)</label>
+                        <input type="number" id="copyYear" placeholder="2026" class="w-full rounded-lg border-gray-300 border p-2.5 text-sm outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- 外觀設定 -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">標記位置</label>
+                        <select id="watermarkPos" class="w-full rounded-lg border-gray-300 border p-2.5 text-sm outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="bottom-right">右下角</option>
+                            <option value="bottom-left">左下角</option>
+                            <option value="top-right">右上角</option>
+                            <option value="top-left">左上角</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">文字顏色</label>
+                        <select id="watermarkColor" class="w-full rounded-lg border-gray-300 border p-2.5 text-sm outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="light">淺色 (適合深色背景)</option>
+                            <option value="dark">深色 (適合淺色背景)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 下載按鈕 -->
+                <button id="downloadBtn" disabled class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    下載附帶授權標記的圖片
+                </button>
+            </div>
+
+            <!-- 右側：預覽面板 -->
+            <div class="w-full lg:w-2/3 flex flex-col">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex-grow flex flex-col">
+                    <div class="bg-gray-50 border-b border-gray-200 p-4 flex justify-between items-center">
+                        <h2 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                            即時預覽
+                        </h2>
+                    </div>
+                    
+                    <div id="canvas-container" class="flex-grow flex items-center justify-center p-4 min-h-[400px] overflow-hidden relative">
+                        <!-- 未上傳圖片時的提示 -->
+                        <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="mb-4 opacity-50"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                            <p>請從左側上傳圖片以開始預覽</p>
+                        </div>
+                        
+                        <!-- Canvas 將會在這裡顯示 -->
+                        <canvas id="previewCanvas" class="max-w-full max-h-[600px] object-contain shadow-sm rounded border border-gray-200 hidden"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM 元素選取
+            const imageUpload = document.getElementById('imageUpload');
+            const ccLicense = document.getElementById('ccLicense');
+            const authorName = document.getElementById('authorName');
+            const copyYear = document.getElementById('copyYear');
+            const watermarkPos = document.getElementById('watermarkPos');
+            const watermarkColor = document.getElementById('watermarkColor');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const canvas = document.getElementById('previewCanvas');
+            const ctx = canvas.getContext('2d');
+            const emptyState = document.getElementById('emptyState');
+
+            // 預設年份為今年
+            copyYear.value = new Date().getFullYear();
+
+            // 全域變數儲存上傳的圖片物件
+            let loadedImage = null;
+
+            // 監聽所有輸入的變更以即時更新 Canvas
+            const inputs = [ccLicense, authorName, copyYear, watermarkPos, watermarkColor];
+            inputs.forEach(input => {
+                input.addEventListener('input', drawCanvas);
+            });
+
+            // 處理圖片上傳
+            imageUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        loadedImage = img;
+                        // 隱藏空狀態提示，顯示 Canvas
+                        emptyState.classList.add('hidden');
+                        canvas.classList.remove('hidden');
+                        // 啟用下載按鈕
+                        downloadBtn.disabled = false;
+                        // 繪製 Canvas
+                        drawCanvas();
+                    }
+                    img.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            });
+
+            // 核心繪圖函數
+            function drawCanvas() {
+                if (!loadedImage) return;
+
+                // 設定 Canvas 尺寸為原圖尺寸，確保下載畫質
+                canvas.width = loadedImage.width;
+                canvas.height = loadedImage.height;
+
+                // 1. 繪製原圖
+                ctx.drawImage(loadedImage, 0, 0);
+
+                // 2. 準備浮水印文字
+                const license = ccLicense.value;
+                const author = authorName.value.trim();
+                const year = copyYear.value.trim();
+                
+                let watermarkText = "";
+                if (author || year) {
+                    const copySymbol = "©";
+                    const yearText = year ? ` ${year}` : "";
+                    const authorText = author ? ` ${author}` : "";
+                    watermarkText = `${copySymbol}${yearText}${authorText}. `;
+                }
+                
+                if (license === 'CC0 1.0') {
+                    watermarkText += `此作品宣告為公眾領域 (CC0 1.0)`;
+                } else {
+                    watermarkText += `此作品採用 ${license} 授權`;
+                }
+
+                // 3. 設定樣式參數 (根據圖片大小動態調整比例)
+                // 字體大小約為圖片高度的 2.5%，並設定上下限
+                let baseFontSize = Math.max(Math.floor(canvas.height * 0.025), 14);
+                // 避免字體過大
+                if (baseFontSize > 100) baseFontSize = 100; 
+
+                const padding = baseFontSize * 0.6;
+                const margin = baseFontSize * 1.0;
+                
+                ctx.font = `bold ${baseFontSize}px sans-serif`;
+                
+                // 測量文字寬度
+                const textMetrics = ctx.measureText(watermarkText);
+                const textWidth = textMetrics.width;
+                const textHeight = baseFontSize;
+
+                const boxWidth = textWidth + (padding * 2);
+                const boxHeight = textHeight + (padding * 2);
+
+                // 4. 計算位置
+                let posX = 0;
+                let posY = 0;
+                const pos = watermarkPos.value;
+
+                if (pos === 'bottom-right') {
+                    posX = canvas.width - boxWidth - margin;
+                    posY = canvas.height - boxHeight - margin;
+                } else if (pos === 'bottom-left') {
+                    posX = margin;
+                    posY = canvas.height - boxHeight - margin;
+                } else if (pos === 'top-right') {
+                    posX = canvas.width - boxWidth - margin;
+                    posY = margin;
+                } else if (pos === 'top-left') {
+                    posX = margin;
+                    posY = margin;
+                }
+
+                // 5. 繪製半透明背景底框 (增加對比度，確保字體清晰可見)
+                const isLightText = watermarkColor.value === 'light';
+                
+                ctx.fillStyle = isLightText ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.7)';
+                
+                // 畫圓角矩形背景
+                const radius = 8;
+                ctx.beginPath();
+                ctx.moveTo(posX + radius, posY);
+                ctx.lineTo(posX + boxWidth - radius, posY);
+                ctx.quadraticCurveTo(posX + boxWidth, posY, posX + boxWidth, posY + radius);
+                ctx.lineTo(posX + boxWidth, posY + boxHeight - radius);
+                ctx.quadraticCurveTo(posX + boxWidth, posY + boxHeight, posX + boxWidth - radius, posY + boxHeight);
+                ctx.lineTo(posX + radius, posY + boxHeight);
+                ctx.quadraticCurveTo(posX, posY + boxHeight, posX, posY + boxHeight - radius);
+                ctx.lineTo(posX, posY + radius);
+                ctx.quadraticCurveTo(posX, posY, posX + radius, posY);
+                ctx.closePath();
+                ctx.fill();
+
+                // 6. 繪製文字
+                ctx.fillStyle = isLightText ? '#FFFFFF' : '#000000';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                
+                // 因為 textBaseline 是 top，Y 座標要加上 padding
+                ctx.fillText(watermarkText, posX + padding, posY + padding + (baseFontSize * 0.1)); // 微調 Y 軸對齊
+            }
+
+            // 處理圖片下載
+            downloadBtn.addEventListener('click', () => {
+                if (!loadedImage) return;
+                
+                // 將 Canvas 轉換為 Data URL (JPEG 格式，品質 0.95)
+                const dataURL = canvas.toDataURL('image/jpeg', 0.95);
+                
+                // 建立一個暫時的 a 標籤來觸發下載
+                const link = document.createElement('a');
+                
+                // 設定下載的檔名
+                const originalName = imageUpload.files[0].name.split('.')[0];
+                const safeLicenseStr = ccLicense.value.replace(/ /g, '_');
+                link.download = `${originalName}_${safeLicenseStr}.jpg`;
+                
+                link.href = dataURL;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        });
+    </script>
+</body>
+</html>
