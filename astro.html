@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>太陽系行星運轉機構 | Orrery Interactive Lab</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'sans-serif'],
+            tech: ['Orbitron', 'sans-serif'],
+            mono: ['"Share Tech Mono"', 'monospace']
+          },
+          colors: {
+            space: { 900: '#060813', 800: '#0b1021', 700: '#141d3b', 600: '#1e2b52' },
+            brass: '#d4af37',
+            blueprint: '#00d2ff',
+          },
+          animation: {
+            'spin-slow': 'spin 12s linear infinite',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    body {
+      background-color: #060813;
+      color: #f1f5f9;
+      overscroll-behavior-y: none;
+    }
+
+    ::-webkit-scrollbar { height: 8px; width: 8px; }
+    ::-webkit-scrollbar-track { background: #0b1021; }
+    ::-webkit-scrollbar-thumb { background: #1e2b52; border-radius: 4px; }
+    
+    .neon-border {
+      box-shadow: 0 0 15px rgba(0, 210, 255, 0.1), inset 0 0 10px rgba(0, 210, 255, 0.05);
+      border: 1px solid rgba(0, 210, 255, 0.2);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%; background: transparent;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 20px; width: 20px;
+      border-radius: 50%; background: #d4af37;
+      cursor: pointer; margin-top: -8px;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%; height: 4px; cursor: pointer;
+      background: #1e2b52; border-radius: 2px;
+    }
+
+    .draggable-planet {
+      touch-action: none;
+      user-select: none;
+      cursor: grab;
+      transition: transform 0.1s;
+    }
+    .draggable-planet:active { cursor: grabbing; }
+    
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%) scale(1.1);
+      filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+    }
+    
+    .drag-source { opacity: 0.3; }
+
+    .drop-zone { transition: all 0.2s ease-out; }
+    
+    @keyframes flashRed {
+      0%, 100% { box-shadow: 0 0 0px rgba(239, 68, 68, 0); background-color: rgba(30, 43, 82, 0.5); border-color: #475569; }
+      25%, 75% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.9); background-color: rgba(239, 68, 68, 0.3); border-color: #ef4444; }
+    }
+    .flash-error { animation: flashRed 0.6s ease-in-out; }
+
+    .glow-success {
+      border-color: #4ade80 !important;
+      background-color: rgba(74, 222, 128, 0.15) !important;
+      box-shadow: 0 0 20px rgba(74, 222, 128, 0.4), inset 0 0 10px rgba(74, 222, 128, 0.2) !important;
+    }
+    
+    .locked { cursor: default; pointer-events: none; }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <header class="sticky top-0 z-50 bg-space-900/90 backdrop-blur-md border-b border-cyan-950">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded bg-gradient-to-tr from-brass via-yellow-400 to-amber-200 p-[2px]">
+          <div class="w-full h-full bg-space-900 rounded-[2px] flex items-center justify-center">
+            <svg class="w-6 h-6 text-brass animate-spin-slow" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/>
+              <path d="M19.43 12.98c.04-.32.07-.64.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65z"/>
+            </svg>
+          </div>
+        </div>
+        <div>
+          <span class="text-[10px] text-cyan-500 font-tech uppercase tracking-widest block leading-tight">STEM Astronomy</span>
+          <h1 class="text-sm sm:text-lg font-black text-slate-100 leading-tight">太陽系行星運轉機構</h1>
+        </div>
+      </div>
+      <nav class="flex space-x-2">
+        <button id="nav-sim" onclick="switchTab('sim')" class="px-3 sm:px-5 py-1.5 rounded text-sm font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/40">軌道儀模擬</button>
+        <button id="nav-sort" onclick="switchTab('sort')" class="px-3 sm:px-5 py-1.5 rounded text-sm font-medium text-slate-400 border border-transparent hover:text-slate-200">行星順序挑戰</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col relative overflow-hidden">
+    
+    <section id="tab-sim" class="flex-grow flex flex-col lg:flex-row gap-4 h-full">
+      <div class="flex-grow bg-space-800 rounded-xl neon-border relative flex flex-col min-h-[400px] lg:min-h-[600px] overflow-hidden">
+        <div class="absolute top-4 left-4 z-10 pointer-events-none">
+          <h2 class="text-xl font-bold text-slate-200">2D 天球儀模擬器</h2>
+          <p class="text-xs text-cyan-400 font-mono mt-1">齒輪連桿傳動系統投影</p>
+        </div>
+        <canvas id="orreryCanvas" class="w-full h-full cursor-crosshair rounded-xl"></canvas>
+      </div>
+
+      <div class="w-full lg:w-80 flex flex-col gap-4">
+        <div class="bg-space-800 p-5 rounded-xl border border-slate-700/80">
+          <h3 class="text-sm font-bold text-brass flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
+            <span class="w-2 h-2 bg-brass rounded-full"></span>動力輸出控制 (Motor)
+          </h3>
+          <div class="flex justify-between items-end mb-2">
+            <span class="text-xs text-slate-400">馬達轉速倍率</span>
+            <span id="speedDisplay" class="font-mono text-lg font-bold text-cyan-400">1.0x</span>
+          </div>
+          <input type="range" id="motorSlider" min="0" max="20" step="0.5" value="1" oninput="updateMotorSpeed(this.value)">
+          <div class="mt-4 flex justify-between items-center text-xs text-slate-500 font-mono">
+            <span>靜止(0x)</span>
+            <span>極速(20x)</span>
+          </div>
+        </div>
+
+        <div class="bg-space-800 p-5 rounded-xl border border-cyan-900/50 flex-grow">
+          <h3 class="text-sm font-bold text-cyan-400 mb-4 border-b border-slate-700 pb-2">星體觀測數據</h3>
+          <div id="planetInfo" class="space-y-3 text-sm">
+            <p class="text-slate-400 text-xs">請點擊畫布中的星體檢視其公轉與傳動機構參數。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-sort" class="hidden flex-grow flex flex-col gap-4 h-full relative">
+      <div class="bg-space-800 p-4 rounded-xl border border-slate-700/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shadow-lg">
+        <div>
+          <h2 class="text-xl font-bold text-slate-100">行星軌道部署任務</h2>
+          <p class="text-xs text-slate-400 mt-1">將下方的行星拖曳至上方正確的直線軌道插槽（由左至右：離太陽最近到最遠）。</p>
+        </div>
+        <button onclick="initSortingGame()" class="px-4 py-2 bg-space-700 hover:bg-space-600 border border-slate-500 rounded text-sm text-slate-200 transition">重置挑戰</button>
+      </div>
+
+      <div class="w-full bg-[#0a0f1d] border border-cyan-900/60 rounded-xl overflow-x-auto shadow-inner h-[280px] sm:h-[320px] flex">
+        <div class="min-w-[800px] w-full h-full flex relative px-4">
+          <div class="w-24 h-full relative flex-shrink-0 flex items-center justify-start border-r-2 border-amber-500/20">
+            <div class="absolute -left-16 w-32 h-64 rounded-r-full bg-gradient-to-r from-amber-500 via-yellow-400 to-transparent blur-[2px] shadow-[0_0_80px_rgba(255,200,0,0.4)] z-0"></div>
+            <span class="relative z-10 text-amber-900 font-black text-xl ml-2 drop-shadow-md" style="writing-mode: vertical-rl;">太陽 SUN</span>
+          </div>
+          <div class="flex-grow flex justify-around items-stretch py-8 pl-4 relative" id="orbit-tracks"></div>
+        </div>
+      </div>
+
+      <div class="w-full bg-space-800 p-4 sm:p-6 rounded-xl border border-slate-700 flex flex-col min-h-[160px]">
+        <h3 class="text-xs text-slate-400 font-mono mb-3">行星零件庫 (拖曳以下星體)</h3>
+        <div id="planet-pool" class="flex flex-wrap gap-4 sm:gap-6 justify-center sm:justify-start items-center relative"></div>
+      </div>
+      
+      <div id="success-banner" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-900/90 border-2 border-green-400 text-green-100 px-8 py-6 rounded-2xl shadow-[0_0_50px_rgba(74,222,128,0.5)] flex flex-col items-center backdrop-blur-sm z-50">
+        <div class="text-4xl mb-2">🚀</div>
+        <h2 class="text-2xl font-bold mb-1">部署完成！</h2>
+        <p class="text-sm">成功還原太陽系八大行星順序</p>
+        <button onclick="initSortingGame()" class="mt-4 px-6 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold transition">再玩一次</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const PLANETS = [
+      { id: 1, name: '水星', en: 'Mercury', color: '#a0aab2', dark: '#3a4047', r: 40, period: 88, ratio: '4.15x', gear: '大帶小增速' },
+      { id: 2, name: '金星', en: 'Venus', color: '#e3bb76', dark: '#806230', r: 70, period: 225, ratio: '1.62x', gear: '中度增速' },
+      { id: 3, name: '地球', en: 'Earth', color: '#3498db', dark: '#154360', r: 105, period: 365, ratio: '1.00x', gear: '1:1基準層' },
+      { id: 4, name: '火星', en: 'Mars', color: '#e74c3c', dark: '#641e16', r: 140, period: 687, ratio: '0.53x', gear: '初級減速' },
+      { id: 5, name: '木星', en: 'Jupiter', color: '#d39e6a', dark: '#6e4c2e', r: 190, period: 4333, ratio: '0.08x', gear: '複合減速' },
+      { id: 6, name: '土星', en: 'Saturn', color: '#e4cd9e', dark: '#826f4b', r: 240, period: 10759, ratio: '0.03x', gear: '複合減速' },
+      { id: 7, name: '天王星', en: 'Uranus', color: '#7fdbff', dark: '#286a80', r: 290, period: 30685, ratio: '0.01x', gear: '三級減速' },
+      { id: 8, name: '海王星', en: 'Neptune', color: '#39cccc', dark: '#155b5b', r: 330, period: 60190, ratio: '0.006x', gear: '三級減速' }
+    ];
+
+    function switchTab(tab) {
+      document.getElementById('tab-sim').classList.toggle('hidden', tab !== 'sim');
+      document.getElementById('tab-sort').classList.toggle('hidden', tab !== 'sort');
+      
+      const navSim = document.getElementById('nav-sim');
+      const navSort = document.getElementById('nav-sort');
+      
+      if (tab === 'sim') {
+        navSim.className = 'px-3 sm:px-5 py-1.5 rounded text-sm font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/40';
+        navSort.className = 'px-3 sm:px-5 py-1.5 rounded text-sm font-medium text-slate-400 border border-transparent hover:text-slate-200';
+        resizeCanvas();
+      } else {
+        navSim.className = 'px-3 sm:px-5 py-1.5 rounded text-sm font-medium text-slate-400 border border-transparent hover:text-slate-200';
+        navSort.className = 'px-3 sm:px-5 py-1.5 rounded text-sm font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/40';
+        if (document.getElementById('planet-pool').children.length === 0) initSortingGame();
+      }
+    }
+
+    const canvas = document.getElementById('orreryCanvas');
+    const ctx = canvas.getContext('2d');
+    let motorSpeed = 1;
+    let angles = PLANETS.map((_, i) => (i * Math.PI) / 4);
+    let moonAngle = 0; // State for Earth's Moon
+    let lastTime = performance.now();
+    let selectedIdx = 2;
+
+    function updateMotorSpeed(val) {
+      motorSpeed = parseFloat(val);
+      document.getElementById('speedDisplay').textContent = motorSpeed.toFixed(1) + 'x';
+    }
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    canvas.addEventListener('pointerdown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      
+      PLANETS.forEach((p, i) => {
+        const px = cx + Math.cos(angles[i]) * p.r * 1.2;
+        const py = cy + Math.sin(angles[i]) * p.r * 1.2;
+        if (Math.hypot(x - px, y - py) < 15) {
+          selectedIdx = i;
+          updatePlanetInfo();
+        }
+      });
+    });
+
+    function updatePlanetInfo() {
+      const p = PLANETS[selectedIdx];
+      document.getElementById('planetInfo').innerHTML = `
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-4 h-4 rounded-full shadow-inner" style="background-color:${p.color}"></span>
+          <span class="text-xl font-bold text-white">${p.name}</span>
+          <span class="text-xs text-slate-400">${p.en}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+          <div class="bg-space-900 p-2 rounded">順序：第 ${p.id} 軌</div>
+          <div class="bg-space-900 p-2 rounded">週期：${p.period} 天</div>
+          <div class="bg-space-900 p-2 rounded text-cyan-400">轉速比：${p.ratio}</div>
+          <div class="bg-space-900 p-2 rounded text-brass">機構：${p.gear}</div>
+        </div>
+      `;
+    }
+
+    function drawOrrery(now) {
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const cx = canvas.width / 2, cy = canvas.height / 2;
+
+      PLANETS.forEach((p, i) => {
+        if (motorSpeed > 0) {
+          const speedFactor = (365 / p.period) * 0.5 * motorSpeed;
+          angles[i] += speedFactor * dt;
+        }
+
+        const r = p.r * 1.2;
+        const px = cx + Math.cos(angles[i]) * r;
+        const py = cy + Math.sin(angles[i]) * r;
+        const planetRadius = 6 + (i * 0.5);
+
+        // Orbit Line
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = i === selectedIdx ? 'rgba(0, 210, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = i === selectedIdx ? 2 : 1;
+        ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+        // Linkage Arm
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py);
+        ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)'; ctx.lineWidth = 3; ctx.stroke();
+
+        // Saturn Ring (Back Half)
+        if (p.id === 6) {
+          ctx.beginPath();
+          ctx.ellipse(px, py, planetRadius * 2.2, planetRadius * 0.8, Math.PI / 8, Math.PI, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(228, 205, 158, 0.5)';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+
+        // 3D Planet Shading
+        const sunAngle = Math.atan2(cy - py, cx - px);
+        const hx = px + Math.cos(sunAngle) * (planetRadius * 0.4);
+        const hy = py + Math.sin(sunAngle) * (planetRadius * 0.4);
+        const grd = ctx.createRadialGradient(hx, hy, planetRadius * 0.1, px, py, planetRadius);
+        grd.addColorStop(0, p.color);
+        grd.addColorStop(1, p.dark);
+
+        ctx.beginPath(); ctx.arc(px, py, planetRadius, 0, Math.PI*2);
+        ctx.fillStyle = grd; 
+        ctx.shadowColor = p.color; 
+        ctx.shadowBlur = i === selectedIdx ? 10 : 0; 
+        ctx.fill(); 
+        ctx.shadowBlur = 0;
+        
+        // Saturn Ring (Front Half)
+        if (p.id === 6) {
+          ctx.beginPath();
+          ctx.ellipse(px, py, planetRadius * 2.2, planetRadius * 0.8, Math.PI / 8, 0, Math.PI);
+          ctx.strokeStyle = 'rgba(228, 205, 158, 0.9)';
+          ctx.lineWidth = 3.5;
+          ctx.stroke();
+        }
+        
+        // Earth's Moon
+        if (p.id === 3) {
+          if (motorSpeed > 0) moonAngle += (13.3 * 0.5 * motorSpeed) * dt; 
+          const moonOrbitR = planetRadius * 2.5;
+          const mx = px + Math.cos(moonAngle) * moonOrbitR;
+          const my = py + Math.sin(moonAngle) * moonOrbitR;
+          
+          ctx.beginPath(); ctx.arc(px, py, moonOrbitR, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.lineWidth = 0.5;
+          ctx.setLineDash([2, 2]); ctx.stroke(); ctx.setLineDash([]);
+
+          const mSunAngle = Math.atan2(cy - my, cx - mx);
+          const moonR = 2.5;
+          const mhx = mx + Math.cos(mSunAngle) * (moonR * 0.4);
+          const mhy = my + Math.sin(mSunAngle) * (moonR * 0.4);
+          const mGrd = ctx.createRadialGradient(mhx, mhy, moonR * 0.1, mx, my, moonR);
+          mGrd.addColorStop(0, '#ffffff');
+          mGrd.addColorStop(1, '#555555');
+
+          ctx.beginPath(); ctx.arc(mx, my, moonR, 0, Math.PI * 2);
+          ctx.fillStyle = mGrd; ctx.fill();
+        }
+        
+        // Planet Label
+        ctx.fillStyle = i === selectedIdx ? '#00d2ff' : '#94a3b8';
+        ctx.font = '12px "Noto Sans TC"';
+        ctx.fillText(p.name, px + 10, py + 4);
+      });
+
+      // Central Sun with glow
+      const sunRadius = 20;
+      const sunGrd = ctx.createRadialGradient(cx - 5, cy - 5, 2, cx, cy, sunRadius);
+      sunGrd.addColorStop(0, '#ffffff');
+      sunGrd.addColorStop(0.2, '#ffea00');
+      sunGrd.addColorStop(1, '#ff6600');
+
+      ctx.beginPath(); ctx.arc(cx, cy, sunRadius, 0, Math.PI * 2);
+      ctx.fillStyle = sunGrd; ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 30; ctx.fill(); ctx.shadowBlur = 0;
+
+      requestAnimationFrame(drawOrrery);
+    }
+
+    resizeCanvas();
+    updatePlanetInfo();
+    requestAnimationFrame(drawOrrery);
+
+    let isDragging = false;
+    let dragSrcEl = null;
+    let dragGhostEl = null;
+    let correctCount = 0;
+
+    function initSortingGame() {
+      const trackContainer = document.getElementById('orbit-tracks');
+      const poolContainer = document.getElementById('planet-pool');
+      document.getElementById('success-banner').classList.add('hidden');
+      correctCount = 0;
+
+      trackContainer.innerHTML = '';
+      for (let i = 1; i <= 8; i++) {
+        const col = document.createElement('div');
+        col.className = 'relative flex flex-col justify-center items-center w-full border-l-[1.5px] border-dashed border-cyan-800/60 hover:bg-cyan-900/10 transition';
+        col.innerHTML = `
+          <div class="absolute top-2 text-cyan-600/60 font-mono text-xs z-0">軌道 ${i}</div>
+          <div class="drop-zone w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-slate-600/80 bg-space-800/80 flex items-center justify-center relative z-10" data-orbit-id="${i}">
+            <span class="text-slate-600 text-xl font-bold opacity-50">${i}</span>
+          </div>
+        `;
+        trackContainer.appendChild(col);
+      }
+
+      poolContainer.innerHTML = '';
+      const shuffled = [...PLANETS].sort(() => Math.random() - 0.5);
+      
+      shuffled.forEach(p => {
+        const el = document.createElement('div');
+        el.className = 'draggable-planet w-14 h-14 sm:w-16 sm:h-16 rounded-full flex flex-col items-center justify-center bg-space-900 border-2 border-slate-700 shadow-md relative group';
+        el.dataset.planetId = p.id;
+        
+        // CSS 3D Sphere styling
+        const ball = document.createElement('div');
+        ball.className = 'w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-inner relative flex items-center justify-center';
+        ball.style.background = `radial-gradient(circle at 30% 30%, ${p.color} 0%, ${p.dark} 90%)`;
+        ball.style.boxShadow = `inset -4px -4px 8px rgba(0,0,0,0.6), 0 0 10px ${p.color}80`;
+        
+        // CSS Saturn Ring
+        if (p.id === 6) {
+          const ring = document.createElement('div');
+          ring.className = 'absolute w-[160%] h-[40%] rounded-[50%] border-[2px] pointer-events-none';
+          ring.style.borderColor = 'rgba(228, 205, 158, 0.7)';
+          ring.style.transform = 'rotate(-15deg)';
+          ring.style.boxShadow = '0 2px 4px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.5)';
+          ball.appendChild(ring);
+        }
+        el.appendChild(ball);
+
+        const label = document.createElement('span');
+        label.className = 'absolute -bottom-6 text-[11px] font-bold text-slate-300 bg-space-900 px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap';
+        label.textContent = p.name;
+        el.appendChild(label);
+
+        el.addEventListener('pointerdown', handleDragStart);
+        poolContainer.appendChild(el);
+      });
+    }
+
+    function handleDragStart(e) {
+      if (e.target.closest('.locked') || isDragging) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      
+      isDragging = true;
+      dragSrcEl = e.currentTarget;
+      
+      dragGhostEl = dragSrcEl.cloneNode(true);
+      dragGhostEl.classList.remove('draggable-planet');
+      dragGhostEl.classList.add('drag-ghost');
+      
+      dragSrcEl.classList.add('drag-source');
+      dragGhostEl.querySelector('span').style.display = 'none';
+
+      document.body.appendChild(dragGhostEl);
+      updateGhostPosition(e.clientX, e.clientY);
+
+      document.addEventListener('pointermove', handleDragMove, { passive: false });
+      document.addEventListener('pointerup', handleDragEnd);
+      document.addEventListener('pointercancel', handleDragEnd);
+      
+      dragSrcEl.setPointerCapture(e.pointerId);
+    }
+
+    function handleDragMove(e) {
+      if (!isDragging || !dragGhostEl) return;
+      e.preventDefault(); 
+      updateGhostPosition(e.clientX, e.clientY);
+    }
+
+    function updateGhostPosition(x, y) {
+      dragGhostEl.style.left = x + 'px';
+      dragGhostEl.style.top = y + 'px';
+    }
+
+    function handleDragEnd(e) {
+      if (!isDragging) return;
+      
+      document.removeEventListener('pointermove', handleDragMove);
+      document.removeEventListener('pointerup', handleDragEnd);
+      document.removeEventListener('pointercancel', handleDragEnd);
+      dragSrcEl.releasePointerCapture(e.pointerId);
+
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+
+      dragGhostEl.remove();
+      dragGhostEl = null;
+      isDragging = false;
+      dragSrcEl.classList.remove('drag-source');
+
+      const targetEl = document.elementFromPoint(clientX, clientY);
+      const dropZone = targetEl ? targetEl.closest('.drop-zone') : null;
+
+      if (dropZone && !dropZone.classList.contains('locked')) {
+        const expectedId = dropZone.dataset.orbitId;
+        const planetId = dragSrcEl.dataset.planetId;
+
+        if (expectedId === planetId) {
+          dropZone.innerHTML = '';
+          
+          dragSrcEl.className = 'w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center relative locked pointer-events-none';
+          dragSrcEl.style.backgroundColor = 'transparent';
+          dragSrcEl.style.border = 'none';
+          dragSrcEl.style.boxShadow = 'none';
+          
+          dropZone.appendChild(dragSrcEl);
+          dropZone.classList.add('glow-success', 'locked');
+          
+          correctCount++;
+          checkWinCondition();
+        } else {
+          dropZone.classList.remove('flash-error');
+          void dropZone.offsetWidth;
+          dropZone.classList.add('flash-error');
+          dropZone.addEventListener('animationend', () => {
+            dropZone.classList.remove('flash-error');
+          }, {once: true});
+        }
+      }
+      dragSrcEl = null;
+    }
+
+    function checkWinCondition() {
+      if (correctCount === 8) {
+        setTimeout(() => {
+          document.getElementById('success-banner').classList.remove('hidden');
+        }, 300);
+      }
+    }
+  </script>
+</body>
+</html>
