@@ -193,14 +193,14 @@
 
   <script>
     const PLANETS = [
-      { id: 1, name: '水星', en: 'Mercury', color: '#a0aab2', dark: '#3a4047', r: 40, period: 88, ratio: '4.15x', gear: '大帶小增速' },
-      { id: 2, name: '金星', en: 'Venus', color: '#e3bb76', dark: '#806230', r: 70, period: 225, ratio: '1.62x', gear: '中度增速' },
-      { id: 3, name: '地球', en: 'Earth', color: '#3498db', dark: '#154360', r: 105, period: 365, ratio: '1.00x', gear: '1:1基準層' },
-      { id: 4, name: '火星', en: 'Mars', color: '#e74c3c', dark: '#641e16', r: 140, period: 687, ratio: '0.53x', gear: '初級減速' },
-      { id: 5, name: '木星', en: 'Jupiter', color: '#d39e6a', dark: '#6e4c2e', r: 190, period: 4333, ratio: '0.08x', gear: '複合減速' },
-      { id: 6, name: '土星', en: 'Saturn', color: '#e4cd9e', dark: '#826f4b', r: 240, period: 10759, ratio: '0.03x', gear: '複合減速' },
-      { id: 7, name: '天王星', en: 'Uranus', color: '#7fdbff', dark: '#286a80', r: 290, period: 30685, ratio: '0.01x', gear: '三級減速' },
-      { id: 8, name: '海王星', en: 'Neptune', color: '#39cccc', dark: '#155b5b', r: 330, period: 60190, ratio: '0.006x', gear: '三級減速' }
+      { id: 1, name: '水星', en: 'Mercury', color: '#a0aab2', dark: '#3a4047', r: 40, period: 88, ratio: '4.15x', gear: '大帶小增速', desc: '最靠近太陽，也是八大行星中最小的。幾乎沒有大氣，因此白天很熱、晚上很冷。' },
+      { id: 2, name: '金星', en: 'Venus', color: '#e3bb76', dark: '#806230', r: 70, period: 225, ratio: '1.62x', gear: '中度增速', desc: '大小和地球相近，但表面非常炎熱，是太陽系中最熱的行星。厚厚的大氣主要由二氧化碳組成。' },
+      { id: 3, name: '地球', en: 'Earth', color: '#3498db', dark: '#154360', r: 105, period: 365, ratio: '1.00x', gear: '1:1基準層', desc: '我們居住的行星，目前唯一已知有生命的星球。表面有大量液態水，因此又被稱為「藍色星球」。' },
+      { id: 4, name: '火星', en: 'Mars', color: '#e74c3c', dark: '#641e16', r: 140, period: 687, ratio: '0.53x', gear: '初級減速', desc: '表面含有大量氧化鐵，所以看起來呈現紅色，又稱「紅色行星」。科學家也持續研究火星是否曾經存在生命。' },
+      { id: 5, name: '木星', en: 'Jupiter', color: '#d39e6a', dark: '#6e4c2e', r: 190, period: 4333, ratio: '0.08x', gear: '複合減速', desc: '太陽系中最大的行星，主要由氣體組成。最著名的特色是「大紅斑」，其實是一個巨大的風暴。' },
+      { id: 6, name: '土星', en: 'Saturn', color: '#e4cd9e', dark: '#826f4b', r: 240, period: 10759, ratio: '0.03x', gear: '複合減速', desc: '最著名的是漂亮又明顯的行星環，主要由冰塊、岩石與塵埃組成。也是一顆巨大的氣體行星。' },
+      { id: 7, name: '天王星', en: 'Uranus', color: '#7fdbff', dark: '#286a80', r: 290, period: 30685, ratio: '0.01x', gear: '三級減速', desc: '最大特色是幾乎「躺著自轉」，自轉軸傾斜角度非常大。因大氣中的甲烷，看起來呈淡藍綠色。' },
+      { id: 8, name: '海王星', en: 'Neptune', color: '#39cccc', dark: '#155b5b', r: 330, period: 60190, ratio: '0.006x', gear: '三級減速', desc: '距離太陽最遠的行星，呈現深藍色。擁有非常強烈的風，是太陽系中風速最快的行星之一。' }
     ];
 
     function switchTab(tab) {
@@ -264,11 +264,14 @@
           <span class="text-xl font-bold text-white">${p.name}</span>
           <span class="text-xs text-slate-400">${p.en}</span>
         </div>
-        <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+        <div class="grid grid-cols-2 gap-2 text-xs font-mono mb-3">
           <div class="bg-space-900 p-2 rounded">順序：第 ${p.id} 軌</div>
           <div class="bg-space-900 p-2 rounded">週期：${p.period} 天</div>
           <div class="bg-space-900 p-2 rounded text-cyan-400">轉速比：${p.ratio}</div>
           <div class="bg-space-900 p-2 rounded text-brass">機構：${p.gear}</div>
+        </div>
+        <div class="p-3 bg-cyan-950/30 border border-cyan-900/50 rounded-lg text-sm text-slate-300 leading-relaxed tracking-wide">
+          ${p.desc}
         </div>
       `;
     }
