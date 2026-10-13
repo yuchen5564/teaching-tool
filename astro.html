@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>太陽系行星運轉機構 | Orrery Interactive Lab</title>
   
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Orbitron & Noto Sans TC -->
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   
   <script>
@@ -34,18 +36,25 @@
     body {
       background-color: #060813;
       color: #f1f5f9;
-      overscroll-behavior-y: none;
+      overscroll-behavior-y: none; /* 防止手機下拉重整 */
     }
 
+    /* 自訂卷軸 */
     ::-webkit-scrollbar { height: 8px; width: 8px; }
     ::-webkit-scrollbar-track { background: #0b1021; }
     ::-webkit-scrollbar-thumb { background: #1e2b52; border-radius: 4px; }
     
+    /* 隱藏水平捲軸 (給 Footer 的不換行標語使用) */
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* UI 發光邊框 */
     .neon-border {
       box-shadow: 0 0 15px rgba(0, 210, 255, 0.1), inset 0 0 10px rgba(0, 210, 255, 0.05);
       border: 1px solid rgba(0, 210, 255, 0.2);
     }
 
+    /* 軌道儀模擬器滑桿 */
     input[type=range] {
       -webkit-appearance: none;
       width: 100%; background: transparent;
@@ -62,6 +71,9 @@
       background: #1e2b52; border-radius: 2px;
     }
 
+    /* =========================================
+       拖曳遊戲專用樣式 (極致觸控優化)
+       ========================================= */
     .draggable-planet {
       touch-action: none;
       user-select: none;
@@ -125,15 +137,20 @@
   <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col relative overflow-hidden">
     
     <section id="tab-sim" class="flex-grow flex flex-col lg:flex-row gap-4 h-full">
-      <div class="flex-grow bg-space-800 rounded-xl neon-border relative flex flex-col min-h-[400px] lg:min-h-[600px] overflow-hidden">
+      
+      <!-- 畫布區 -->
+      <div class="flex-grow bg-space-800 rounded-xl neon-border relative flex flex-col min-h-[500px] lg:min-h-[750px] overflow-hidden">
         <div class="absolute top-4 left-4 z-10 pointer-events-none">
           <h2 class="text-xl font-bold text-slate-200">2D 天球儀模擬器</h2>
           <p class="text-xs text-cyan-400 font-mono mt-1">齒輪連桿傳動系統投影</p>
         </div>
-        <canvas id="orreryCanvas" class="w-full h-full cursor-crosshair rounded-xl"></canvas>
+        <!-- 加入 cursor-grab 以表示可拖曳平移 -->
+        <canvas id="orreryCanvas" class="w-full h-full cursor-grab rounded-xl"></canvas>
       </div>
 
+      <!-- 控制面板 -->
       <div class="w-full lg:w-80 flex flex-col gap-4">
+        <!-- 動力控制 -->
         <div class="bg-space-800 p-5 rounded-xl border border-slate-700/80">
           <h3 class="text-sm font-bold text-brass flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
             <span class="w-2 h-2 bg-brass rounded-full"></span>動力輸出控制 (Motor)
@@ -149,9 +166,11 @@
           </div>
         </div>
 
+        <!-- 資訊面板 -->
         <div class="bg-space-800 p-5 rounded-xl border border-cyan-900/50 flex-grow">
           <h3 class="text-sm font-bold text-cyan-400 mb-4 border-b border-slate-700 pb-2">星體觀測數據</h3>
           <div id="planetInfo" class="space-y-3 text-sm">
+            <!-- 動態生成 -->
             <p class="text-slate-400 text-xs">請點擊畫布中的星體檢視其公轉與傳動機構參數。</p>
           </div>
         </div>
@@ -159,50 +178,96 @@
     </section>
 
     <section id="tab-sort" class="hidden flex-grow flex flex-col gap-4 h-full relative">
+      
       <div class="bg-space-800 p-4 rounded-xl border border-slate-700/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shadow-lg">
         <div>
-          <h2 class="text-xl font-bold text-slate-100">行星軌道部署任務</h2>
+          <h2 class="text-xl font-bold text-slate-100">行星軌道排列任務</h2>
           <p class="text-xs text-slate-400 mt-1">將下方的行星拖曳至上方正確的直線軌道插槽（由左至右：離太陽最近到最遠）。</p>
         </div>
         <button onclick="initSortingGame()" class="px-4 py-2 bg-space-700 hover:bg-space-600 border border-slate-500 rounded text-sm text-slate-200 transition">重置挑戰</button>
       </div>
 
-      <div class="w-full bg-[#0a0f1d] border border-cyan-900/60 rounded-xl overflow-x-auto shadow-inner h-[280px] sm:h-[320px] flex">
+      <!-- 直線軌道區 (可橫向捲動以適應手機) -->
+      <div class="w-full bg-[#0a0f1d] border border-cyan-900/60 rounded-xl overflow-x-auto shadow-inner h-[350px] sm:h-[400px] flex">
         <div class="min-w-[800px] w-full h-full flex relative px-4">
+          
+          <!-- 左側太陽 -->
           <div class="w-24 h-full relative flex-shrink-0 flex items-center justify-start border-r-2 border-amber-500/20">
             <div class="absolute -left-16 w-32 h-64 rounded-r-full bg-gradient-to-r from-amber-500 via-yellow-400 to-transparent blur-[2px] shadow-[0_0_80px_rgba(255,200,0,0.4)] z-0"></div>
             <span class="relative z-10 text-amber-900 font-black text-xl ml-2 drop-shadow-md" style="writing-mode: vertical-rl;">太陽 SUN</span>
           </div>
-          <div class="flex-grow flex justify-around items-stretch py-8 pl-4 relative" id="orbit-tracks"></div>
+
+          <!-- 8條直線軌道 -->
+          <div class="flex-grow flex justify-around items-stretch py-8 pl-4 relative" id="orbit-tracks">
+            <!-- 由 JS 動態生成 -->
+          </div>
         </div>
       </div>
 
+      <!-- 行星停泊庫 (零件區) -->
       <div class="w-full bg-space-800 p-4 sm:p-6 rounded-xl border border-slate-700 flex flex-col min-h-[160px]">
         <h3 class="text-xs text-slate-400 font-mono mb-3">行星零件庫 (拖曳以下星體)</h3>
-        <div id="planet-pool" class="flex flex-wrap gap-4 sm:gap-6 justify-center sm:justify-start items-center relative"></div>
+        <div id="planet-pool" class="flex flex-wrap gap-4 sm:gap-6 justify-center sm:justify-start items-center relative">
+          <!-- 由 JS 動態生成 -->
+        </div>
       </div>
       
+      <!-- 完成提示 -->
       <div id="success-banner" class="hidden absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-green-900/90 border-2 border-green-400 text-green-100 px-8 py-6 rounded-2xl shadow-[0_0_50px_rgba(74,222,128,0.5)] flex flex-col items-center backdrop-blur-sm z-50">
         <div class="text-4xl mb-2">🚀</div>
-        <h2 class="text-2xl font-bold mb-1">部署完成！</h2>
+        <h2 class="text-2xl font-bold mb-1">排列完成！</h2>
         <p class="text-sm">成功還原太陽系八大行星順序</p>
         <button onclick="initSortingGame()" class="mt-4 px-6 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold transition">再玩一次</button>
       </div>
+
     </section>
   </main>
 
+  <footer class="w-full border-t border-cyan-950 bg-space-900/95 backdrop-blur z-40 mt-4 relative">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      
+      <!-- Logo 與團隊名稱 -->
+      <div class="flex items-center gap-3">
+		<img src="./img/astro/meet_logo_2.jpg" class="w-8 h-8 rounded-full" />
+        <div class="text-sm text-slate-400">
+          製作團隊：<span class="text-cyan-400 font-bold tracking-wider">域見未來</span> 
+        </div>
+      </div>
+
+      <!-- 不換行的 Slogan (加上 overflow-x-auto whitespace-nowrap 處理超出版面) -->
+	  <div class="w-full sm:w-1/3 text-center order-first sm:order-none mb-2 sm:mb-0 overflow-x-auto scrollbar-hide">
+        <p class="text-xs sm:text-sm text-cyan-500/70 font-tech tracking-[0em] uppercase whitespace-nowrap inline-block px-2">
+			  從好奇出發，讓探索沒有邊界。 跟著域見未來，一起發現更多學習的可能。
+        </p>
+      </div>
+
+      <!-- IG 連結 -->
+      <a href="https://www.instagram.com/yujian_meetagain/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-slate-400 hover:text-pink-500 transition-colors duration-300 group">
+        <span class="text-xs font-mono group-hover:text-pink-400 transition-colors">Follow Us</span>
+        <!-- IG SVG Icon -->
+        <svg class="w-5 h-5 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill-rule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clip-rule="evenodd" />
+        </svg>
+      </a>
+    </div>
+  </footer>
+
   <script>
+    // 星體資料 (共用) - 補回了 dark (暗部陰影色) 給 3D 光影計算使用
     const PLANETS = [
-      { id: 1, name: '水星', en: 'Mercury', color: '#a0aab2', dark: '#3a4047', r: 40, period: 88, ratio: '4.15x', gear: '大帶小增速', desc: '最靠近太陽，也是八大行星中最小的。幾乎沒有大氣，因此白天很熱、晚上很冷。' },
-      { id: 2, name: '金星', en: 'Venus', color: '#e3bb76', dark: '#806230', r: 70, period: 225, ratio: '1.62x', gear: '中度增速', desc: '大小和地球相近，但表面非常炎熱，是太陽系中最熱的行星。厚厚的大氣主要由二氧化碳組成。' },
-      { id: 3, name: '地球', en: 'Earth', color: '#3498db', dark: '#154360', r: 105, period: 365, ratio: '1.00x', gear: '1:1基準層', desc: '我們居住的行星，目前唯一已知有生命的星球。表面有大量液態水，因此又被稱為「藍色星球」。' },
-      { id: 4, name: '火星', en: 'Mars', color: '#e74c3c', dark: '#641e16', r: 140, period: 687, ratio: '0.53x', gear: '初級減速', desc: '表面含有大量氧化鐵，所以看起來呈現紅色，又稱「紅色行星」。科學家也持續研究火星是否曾經存在生命。' },
-      { id: 5, name: '木星', en: 'Jupiter', color: '#d39e6a', dark: '#6e4c2e', r: 190, period: 4333, ratio: '0.08x', gear: '複合減速', desc: '太陽系中最大的行星，主要由氣體組成。最著名的特色是「大紅斑」，其實是一個巨大的風暴。' },
-      { id: 6, name: '土星', en: 'Saturn', color: '#e4cd9e', dark: '#826f4b', r: 240, period: 10759, ratio: '0.03x', gear: '複合減速', desc: '最著名的是漂亮又明顯的行星環，主要由冰塊、岩石與塵埃組成。也是一顆巨大的氣體行星。' },
-      { id: 7, name: '天王星', en: 'Uranus', color: '#7fdbff', dark: '#286a80', r: 290, period: 30685, ratio: '0.01x', gear: '三級減速', desc: '最大特色是幾乎「躺著自轉」，自轉軸傾斜角度非常大。因大氣中的甲烷，看起來呈淡藍綠色。' },
-      { id: 8, name: '海王星', en: 'Neptune', color: '#39cccc', dark: '#155b5b', r: 330, period: 60190, ratio: '0.006x', gear: '三級減速', desc: '距離太陽最遠的行星，呈現深藍色。擁有非常強烈的風，是太陽系中風速最快的行星之一。' }
+      { id: 1, name: '水星', en: 'Mercury', color: '#a0aab2', dark: '#3a4047', r: 40, period: 88, ratio: '4.15x', gear: '大帶小增速', desc: '最靠近太陽，也是八大行星中最小的。幾乎沒有大氣，因此白天很熱、晚上很冷。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Mercury_in_true_color.jpg' },
+      { id: 2, name: '金星', en: 'Venus', color: '#e3bb76', dark: '#806230', r: 70, period: 225, ratio: '1.62x', gear: '中度增速', desc: '大小和地球相近，但表面非常炎熱，是太陽系中最熱的行星。厚厚的大氣主要由二氧化碳組成。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Venus_from_Mariner_10.jpg' },
+      { id: 3, name: '地球', en: 'Earth', color: '#3498db', dark: '#154360', r: 105, period: 365, ratio: '1.00x', gear: '1:1基準層', desc: '我們居住的行星，目前唯一已知有生命的星球。表面有大量液態水，因此又被稱為「藍色星球」。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg' },
+      { id: 4, name: '火星', en: 'Mars', color: '#e74c3c', dark: '#641e16', r: 140, period: 687, ratio: '0.53x', gear: '初級減速', desc: '表面含有大量氧化鐵，所以看起來呈現紅色，又稱「紅色行星」。科學家也持續研究火星是否曾經存在生命。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg' },
+      { id: 5, name: '木星', en: 'Jupiter', color: '#d39e6a', dark: '#6e4c2e', r: 190, period: 4333, ratio: '0.08x', gear: '複合減速', desc: '太陽系中最大的行星，主要由氣體組成。最著名的特色是「大紅斑」，其實是一個巨大的風暴。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/2/2b/Jupiter_and_its_shrunken_Great_Red_Spot.jpg' },
+      { id: 6, name: '土星', en: 'Saturn', color: '#e4cd9e', dark: '#826f4b', r: 240, period: 10759, ratio: '0.03x', gear: '複合減速', desc: '最著名的是漂亮又明顯的行星環，主要由冰塊、岩石與塵埃組成。也是一顆巨大的氣體行星。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg' },
+      { id: 7, name: '天王星', en: 'Uranus', color: '#7fdbff', dark: '#286a80', r: 290, period: 30685, ratio: '0.01x', gear: '三級減速', desc: '最大特色是幾乎「躺著自轉」，自轉軸傾斜角度非常大。因大氣中的甲烷，看起來呈淡藍綠色。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg' },
+      { id: 8, name: '海王星', en: 'Neptune', color: '#39cccc', dark: '#155b5b', r: 330, period: 60190, ratio: '0.006x', gear: '三級減速', desc: '距離太陽最遠的行星，呈現深藍色。擁有非常強烈的風，是太陽系中風速最快的行星之一。', imgUrl: 'https://upload.wikimedia.org/wikipedia/commons/6/63/Neptune_-_Voyager_2_%2829347980845%29_flatten_crop.jpg' }
     ];
 
+    /* =========================================================
+       頁籤切換邏輯
+       ========================================================= */
     function switchTab(tab) {
       document.getElementById('tab-sim').classList.toggle('hidden', tab !== 'sim');
       document.getElementById('tab-sort').classList.toggle('hidden', tab !== 'sort');
@@ -217,17 +282,28 @@
       } else {
         navSim.className = 'px-3 sm:px-5 py-1.5 rounded text-sm font-medium text-slate-400 border border-transparent hover:text-slate-200';
         navSort.className = 'px-3 sm:px-5 py-1.5 rounded text-sm font-bold text-cyan-400 bg-cyan-950/60 border border-cyan-500/40';
+        // 初次進入排序遊戲時初始化
         if (document.getElementById('planet-pool').children.length === 0) initSortingGame();
       }
     }
 
+    /* =========================================================
+       Tab 1: 軌道儀模擬器 (Canvas 2D)
+       ========================================================= */
     const canvas = document.getElementById('orreryCanvas');
     const ctx = canvas.getContext('2d');
     let motorSpeed = 1;
-    let angles = PLANETS.map((_, i) => (i * Math.PI) / 4);
-    let moonAngle = 0; // State for Earth's Moon
+    let angles = PLANETS.map((_, i) => (i * Math.PI) / 4); // 初始分散角度
+    let moonAngle = 0; // 地球的月球公轉角度
     let lastTime = performance.now();
-    let selectedIdx = 2;
+    let selectedIdx = 2; // 預設選地球
+    
+    // Canvas 拖曳平移 (Panning) 變數
+    let panX = 0;
+    let panY = 0;
+    let isCanvasDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
 
     function updateMotorSpeed(val) {
       motorSpeed = parseFloat(val);
@@ -241,10 +317,15 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
+    // 處理畫布點擊與拖曳
     canvas.addEventListener('pointerdown', (e) => {
       const rect = canvas.getBoundingClientRect();
-      const cx = canvas.width / 2, cy = canvas.height / 2;
-      const x = e.clientX - rect.left, y = e.clientY - rect.top;
+      const cx = canvas.width / 2 + panX;
+      const cy = canvas.height / 2 + panY;
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      let clickedPlanet = false;
       
       PLANETS.forEach((p, i) => {
         const px = cx + Math.cos(angles[i]) * p.r * 1.2;
@@ -252,25 +333,71 @@
         if (Math.hypot(x - px, y - py) < 15) {
           selectedIdx = i;
           updatePlanetInfo();
+          clickedPlanet = true;
         }
       });
+
+      // 沒點到行星，啟動平移拖曳模式
+      if (!clickedPlanet) {
+        isCanvasDragging = true;
+        dragStartX = e.clientX - panX;
+        dragStartY = e.clientY - panY;
+        canvas.classList.remove('cursor-grab');
+        canvas.classList.add('cursor-grabbing');
+        canvas.setPointerCapture(e.pointerId); // 鎖定游標事件
+      }
     });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isCanvasDragging) return;
+      panX = e.clientX - dragStartX;
+      panY = e.clientY - dragStartY;
+    });
+
+    const endCanvasDrag = (e) => {
+      if (isCanvasDragging) {
+        isCanvasDragging = false;
+        canvas.classList.remove('cursor-grabbing');
+        canvas.classList.add('cursor-grab');
+        canvas.releasePointerCapture(e.pointerId);
+      }
+    };
+    canvas.addEventListener('pointerup', endCanvasDrag);
+    canvas.addEventListener('pointercancel', endCanvasDrag);
 
     function updatePlanetInfo() {
       const p = PLANETS[selectedIdx];
+      // 自動從圖片直連網址解析出維基共享資源的原始檔案頁面
+      const fileName = p.imgUrl.split('/').pop();
+      const sourceUrl = 'https://commons.wikimedia.org/wiki/File:' + fileName;
+
       document.getElementById('planetInfo').innerHTML = `
         <div class="flex items-center gap-2 mb-2">
           <span class="w-4 h-4 rounded-full shadow-inner" style="background-color:${p.color}"></span>
           <span class="text-xl font-bold text-white">${p.name}</span>
           <span class="text-xs text-slate-400">${p.en}</span>
         </div>
+        
+        <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" title="點擊前往維基共享資源查看原始照片" class="w-full h-40 mb-3 rounded-lg overflow-hidden border border-cyan-900/50 hover:border-cyan-400 relative group bg-black flex justify-center items-center cursor-pointer transition-colors block">
+          <img src="${p.imgUrl}" alt="${p.name} 真實影像" class="w-full h-full object-contain py-1 opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" crossorigin="anonymous" />
+          <div class="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 rounded text-[9px] text-slate-400 font-mono backdrop-blur border border-white/10 shadow-lg">NASA / CC0</div>
+          
+          <!-- 右上角的外連提示圖示 -->
+          <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-md">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </div>
+        </a>
+
         <div class="grid grid-cols-2 gap-2 text-xs font-mono mb-3">
           <div class="bg-space-900 p-2 rounded">順序：第 ${p.id} 軌</div>
           <div class="bg-space-900 p-2 rounded">週期：${p.period} 天</div>
           <div class="bg-space-900 p-2 rounded text-cyan-400">轉速比：${p.ratio}</div>
           <div class="bg-space-900 p-2 rounded text-brass">機構：${p.gear}</div>
         </div>
-        <div class="p-3 bg-cyan-950/30 border border-cyan-900/50 rounded-lg text-sm text-slate-300 leading-relaxed tracking-wide">
+        
+        <div class="p-3 bg-cyan-950/30 border border-cyan-900/50 rounded-lg text-sm text-slate-300 leading-relaxed tracking-wide shadow-inner">
           ${p.desc}
         </div>
       `;
@@ -280,30 +407,35 @@
       const dt = (now - lastTime) / 1000;
       lastTime = now;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const cx = canvas.width / 2, cy = canvas.height / 2;
+      
+      // 計算包含 panX, panY 偏移的中心點
+      const cx = canvas.width / 2 + panX;
+      const cy = canvas.height / 2 + panY;
 
+      // 繪製軌道與星體
       PLANETS.forEach((p, i) => {
+        // 更新角度 (以地球365天為基準，按比例算速度)
         if (motorSpeed > 0) {
           const speedFactor = (365 / p.period) * 0.5 * motorSpeed;
           angles[i] += speedFactor * dt;
         }
 
-        const r = p.r * 1.2;
+        const r = p.r * 1.2; // 縮放係數
         const px = cx + Math.cos(angles[i]) * r;
         const py = cy + Math.sin(angles[i]) * r;
         const planetRadius = 6 + (i * 0.5);
 
-        // Orbit Line
+        // 畫虛線軌道
         ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.strokeStyle = i === selectedIdx ? 'rgba(0, 210, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)';
         ctx.lineWidth = i === selectedIdx ? 2 : 1;
         ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
 
-        // Linkage Arm
+        // 畫機械連桿
         ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(px, py);
         ctx.strokeStyle = 'rgba(212, 175, 55, 0.4)'; ctx.lineWidth = 3; ctx.stroke();
 
-        // Saturn Ring (Back Half)
+        // 畫土星環 (後半部) - 創造立體遮擋感
         if (p.id === 6) {
           ctx.beginPath();
           ctx.ellipse(px, py, planetRadius * 2.2, planetRadius * 0.8, Math.PI / 8, Math.PI, Math.PI * 2);
@@ -312,13 +444,13 @@
           ctx.stroke();
         }
 
-        // 3D Planet Shading
+        // 畫行星本體 (加入 3D 動態追光漸層陰影)
         const sunAngle = Math.atan2(cy - py, cx - px);
         const hx = px + Math.cos(sunAngle) * (planetRadius * 0.4);
         const hy = py + Math.sin(sunAngle) * (planetRadius * 0.4);
         const grd = ctx.createRadialGradient(hx, hy, planetRadius * 0.1, px, py, planetRadius);
         grd.addColorStop(0, p.color);
-        grd.addColorStop(1, p.dark);
+        grd.addColorStop(1, p.dark); // 暗部顏色
 
         ctx.beginPath(); ctx.arc(px, py, planetRadius, 0, Math.PI*2);
         ctx.fillStyle = grd; 
@@ -327,7 +459,7 @@
         ctx.fill(); 
         ctx.shadowBlur = 0;
         
-        // Saturn Ring (Front Half)
+        // 畫土星環 (前半部)
         if (p.id === 6) {
           ctx.beginPath();
           ctx.ellipse(px, py, planetRadius * 2.2, planetRadius * 0.8, Math.PI / 8, 0, Math.PI);
@@ -335,18 +467,20 @@
           ctx.lineWidth = 3.5;
           ctx.stroke();
         }
-        
-        // Earth's Moon
+
+        // 繪製地球的月球系統
         if (p.id === 3) {
           if (motorSpeed > 0) moonAngle += (13.3 * 0.5 * motorSpeed) * dt; 
           const moonOrbitR = planetRadius * 2.5;
           const mx = px + Math.cos(moonAngle) * moonOrbitR;
           const my = py + Math.sin(moonAngle) * moonOrbitR;
           
+          // 月球軌道
           ctx.beginPath(); ctx.arc(px, py, moonOrbitR, 0, Math.PI * 2);
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)'; ctx.lineWidth = 0.5;
           ctx.setLineDash([2, 2]); ctx.stroke(); ctx.setLineDash([]);
 
+          // 月球本體 3D 光影
           const mSunAngle = Math.atan2(cy - my, cx - mx);
           const moonR = 2.5;
           const mhx = mx + Math.cos(mSunAngle) * (moonR * 0.4);
@@ -358,30 +492,35 @@
           ctx.beginPath(); ctx.arc(mx, my, moonR, 0, Math.PI * 2);
           ctx.fillStyle = mGrd; ctx.fill();
         }
-        
-        // Planet Label
+
+        // 標籤
         ctx.fillStyle = i === selectedIdx ? '#00d2ff' : '#94a3b8';
         ctx.font = '12px "Noto Sans TC"';
         ctx.fillText(p.name, px + 10, py + 4);
       });
 
-      // Central Sun with glow
+      // 畫中央發光太陽
       const sunRadius = 20;
       const sunGrd = ctx.createRadialGradient(cx - 5, cy - 5, 2, cx, cy, sunRadius);
       sunGrd.addColorStop(0, '#ffffff');
       sunGrd.addColorStop(0.2, '#ffea00');
       sunGrd.addColorStop(1, '#ff6600');
-
+      
       ctx.beginPath(); ctx.arc(cx, cy, sunRadius, 0, Math.PI * 2);
       ctx.fillStyle = sunGrd; ctx.shadowColor = '#ff6600'; ctx.shadowBlur = 30; ctx.fill(); ctx.shadowBlur = 0;
 
       requestAnimationFrame(drawOrrery);
     }
 
+    // 啟動模擬器
     resizeCanvas();
     updatePlanetInfo();
     requestAnimationFrame(drawOrrery);
 
+    /* =========================================================
+       Tab 2: 行星軌道部署任務 (極致觸控 Drag & Drop)
+       ========================================================= */
+    
     let isDragging = false;
     let dragSrcEl = null;
     let dragGhostEl = null;
@@ -393,6 +532,7 @@
       document.getElementById('success-banner').classList.add('hidden');
       correctCount = 0;
 
+      // 1. 生成直線軌道與插槽
       trackContainer.innerHTML = '';
       for (let i = 1; i <= 8; i++) {
         const col = document.createElement('div');
@@ -406,6 +546,7 @@
         trackContainer.appendChild(col);
       }
 
+      // 2. 生成打亂的行星零件
       poolContainer.innerHTML = '';
       const shuffled = [...PLANETS].sort(() => Math.random() - 0.5);
       
@@ -414,16 +555,16 @@
         el.className = 'draggable-planet w-14 h-14 sm:w-16 sm:h-16 rounded-full flex flex-col items-center justify-center bg-space-900 border-2 border-slate-700 shadow-md relative group';
         el.dataset.planetId = p.id;
         
-        // CSS 3D Sphere styling
+        // 渲染球體外觀 (恢復 3D 漸層球體)
         const ball = document.createElement('div');
         ball.className = 'w-8 h-8 sm:w-10 sm:h-10 rounded-full shadow-inner relative flex items-center justify-center';
         ball.style.background = `radial-gradient(circle at 30% 30%, ${p.color} 0%, ${p.dark} 90%)`;
         ball.style.boxShadow = `inset -4px -4px 8px rgba(0,0,0,0.6), 0 0 10px ${p.color}80`;
         
-        // CSS Saturn Ring
+        // 恢復土星環 (DOM 物件模擬)
         if (p.id === 6) {
           const ring = document.createElement('div');
-          ring.className = 'absolute w-[160%] h-[40%] rounded-[50%] border-[2px] pointer-events-none';
+          ring.className = 'absolute w-[160%] h-[40%] rounded-[50%] border-[2px] pointer-events-none z-10';
           ring.style.borderColor = 'rgba(228, 205, 158, 0.7)';
           ring.style.transform = 'rotate(-15deg)';
           ring.style.boxShadow = '0 2px 4px rgba(0,0,0,0.5), inset 0 2px 4px rgba(0,0,0,0.5)';
@@ -431,11 +572,13 @@
         }
         el.appendChild(ball);
 
+        // 標籤
         const label = document.createElement('span');
         label.className = 'absolute -bottom-6 text-[11px] font-bold text-slate-300 bg-space-900 px-1.5 py-0.5 rounded pointer-events-none whitespace-nowrap';
         label.textContent = p.name;
         el.appendChild(label);
 
+        // 綁定觸控與滑鼠事件
         el.addEventListener('pointerdown', handleDragStart);
         poolContainer.appendChild(el);
       });
@@ -443,31 +586,37 @@
 
     function handleDragStart(e) {
       if (e.target.closest('.locked') || isDragging) return;
+      
+      // 確保是左鍵或觸控
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       
       isDragging = true;
       dragSrcEl = e.currentTarget;
       
+      // 建立跟隨指標的分身 (Ghost)
       dragGhostEl = dragSrcEl.cloneNode(true);
       dragGhostEl.classList.remove('draggable-planet');
       dragGhostEl.classList.add('drag-ghost');
       
+      // 隱藏原始物件的標籤避免干擾視線
       dragSrcEl.classList.add('drag-source');
       dragGhostEl.querySelector('span').style.display = 'none';
 
       document.body.appendChild(dragGhostEl);
       updateGhostPosition(e.clientX, e.clientY);
 
+      // 綁定全域移動與釋放事件 (設定 passive: false 以便 preventDefault)
       document.addEventListener('pointermove', handleDragMove, { passive: false });
       document.addEventListener('pointerup', handleDragEnd);
       document.addEventListener('pointercancel', handleDragEnd);
       
+      // 防止移動時發生原生拖曳或滾動
       dragSrcEl.setPointerCapture(e.pointerId);
     }
 
     function handleDragMove(e) {
       if (!isDragging || !dragGhostEl) return;
-      e.preventDefault(); 
+      e.preventDefault(); // 防止手機滾動畫面的干擾
       updateGhostPosition(e.clientX, e.clientY);
     }
 
@@ -479,6 +628,7 @@
     function handleDragEnd(e) {
       if (!isDragging) return;
       
+      // 移除監聽器
       document.removeEventListener('pointermove', handleDragMove);
       document.removeEventListener('pointerup', handleDragEnd);
       document.removeEventListener('pointercancel', handleDragEnd);
@@ -487,11 +637,14 @@
       const clientX = e.clientX;
       const clientY = e.clientY;
 
+      // 移除分身
       dragGhostEl.remove();
       dragGhostEl = null;
       isDragging = false;
       dragSrcEl.classList.remove('drag-source');
 
+      // 關鍵：使用 elementFromPoint 尋找放開位置的底層元素
+      // (因為分身有 pointer-events: none，所以不會被選到)
       const targetEl = document.elementFromPoint(clientX, clientY);
       const dropZone = targetEl ? targetEl.closest('.drop-zone') : null;
 
@@ -500,8 +653,10 @@
         const planetId = dragSrcEl.dataset.planetId;
 
         if (expectedId === planetId) {
-          dropZone.innerHTML = '';
+          // 放置正確：鎖定位置
+          dropZone.innerHTML = ''; // 清除數字
           
+          // 調整外觀，移除絕對定位，將原始球體放入插槽
           dragSrcEl.className = 'w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center relative locked pointer-events-none';
           dragSrcEl.style.backgroundColor = 'transparent';
           dragSrcEl.style.border = 'none';
@@ -513,7 +668,9 @@
           correctCount++;
           checkWinCondition();
         } else {
+          // 放置錯誤：觸發紅光閃爍，球體會自動保留在零件庫
           dropZone.classList.remove('flash-error');
+          // 強制重繪以重啟動畫
           void dropZone.offsetWidth;
           dropZone.classList.add('flash-error');
           dropZone.addEventListener('animationend', () => {
@@ -521,6 +678,7 @@
           }, {once: true});
         }
       }
+      // 如果沒放到插槽上，原本的 dragSrcEl 會留在 pool 裡，不需要特別處理
       dragSrcEl = null;
     }
 
@@ -531,6 +689,7 @@
         }, 300);
       }
     }
+
   </script>
 </body>
 </html>
