@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>太陽系行星運轉機構 | Orrery Interactive Lab</title>
   
   <!-- Tailwind CSS CDN -->
@@ -33,10 +33,21 @@
   </script>
   
   <style>
+    /* =========================================
+       整頁固定為一個螢幕高度，不產生頁面捲軸
+       (100dvh 會扣掉 iPad Safari 的網址列/工具列)
+       ========================================= */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none; /* 防止 iPad 橡皮筋回彈與下拉重整 */
+    }
     body {
+      height: 100vh;   /* 舊版瀏覽器後備 */
+      height: 100dvh;
       background-color: #060813;
       color: #f1f5f9;
-      overscroll-behavior-y: none; /* 防止手機下拉重整 */
+      -webkit-text-size-adjust: 100%;
     }
 
     /* 自訂卷軸 */
@@ -44,9 +55,25 @@
     ::-webkit-scrollbar-track { background: #0b1021; }
     ::-webkit-scrollbar-thumb { background: #1e2b52; border-radius: 4px; }
     
-    /* 隱藏水平捲軸 (給 Footer 的不換行標語使用) */
+    /* 隱藏捲軸 (內容仍可用手指滑動，但不顯示捲軸) */
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 星體照片：直式固定大小；橫式時依螢幕高度自動縮放，避免資訊面板被擠爆 */
+    .planet-photo { width: 9rem; height: 7rem; }
+    @media (min-width: 1024px) {
+      .planet-photo { width: 100%; height: 9rem; height: clamp(4rem, calc(100dvh - 668px), 9rem); }
+    }
+    /* 較矮的橫式 iPad (例如 Safari 顯示分頁列時)：壓縮控制面板間距 */
+    @media (min-width: 1024px) and (max-height: 760px) {
+      .motor-panel, .info-panel { padding: 0.875rem 1rem !important; }
+      .motor-panel h3, .info-panel h3 { margin-bottom: 0.5rem !important; }
+      .motor-scale { margin-top: 0.5rem !important; }
+      #planetInfo > * + * { margin-top: 0.5rem !important; }
+    }
+
+    /* 畫布上的拖曳不觸發頁面捲動或縮放 */
+    #orreryCanvas { touch-action: none; }
 
     /* UI 發光邊框 */
     .neon-border {
@@ -77,22 +104,47 @@
     .draggable-planet {
       touch-action: none;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;   /* iPad 長按不跳出選單 */
+      -webkit-tap-highlight-color: transparent;
       cursor: grab;
-      transition: transform 0.1s;
+      transition: opacity 0.15s;
     }
     .draggable-planet:active { cursor: grabbing; }
-    
+
+    /* 拖曳分身：一律用 !important 固定定位，
+       避免被 Tailwind 的 .relative 等樣式蓋掉而擠進版面造成畫面跑掉 */
     .drag-ghost {
-      position: fixed;
-      pointer-events: none;
+      position: fixed !important;
+      left: 0 !important;
+      top: 0 !important;
+      margin: 0 !important;
+      pointer-events: none !important;
       z-index: 9999;
-      transform: translate(-50%, -50%) scale(1.1);
+      will-change: transform;
       filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
     }
-    
+    .drag-ghost.returning { transition: transform 0.25s ease-out, opacity 0.25s ease-out; }
+
     .drag-source { opacity: 0.3; }
 
     .drop-zone { transition: all 0.2s ease-out; }
+
+    /* 拖曳經過插槽時的提示 */
+    .drop-hover {
+      border-color: #00d2ff !important;
+      background-color: rgba(0, 210, 255, 0.15) !important;
+      box-shadow: 0 0 18px rgba(0, 210, 255, 0.5) !important;
+      transform: scale(1.08);
+    }
+
+    /* 放置正確時的彈跳動畫 */
+    @keyframes snapIn {
+      0% { transform: scale(1.25); }
+      60% { transform: scale(0.92); }
+      100% { transform: scale(1); }
+    }
+    .snap-in { animation: snapIn 0.35s ease-out; }
     
     @keyframes flashRed {
       0%, 100% { box-shadow: 0 0 0px rgba(239, 68, 68, 0); background-color: rgba(30, 43, 82, 0.5); border-color: #475569; }
@@ -109,9 +161,9 @@
     .locked { cursor: default; pointer-events: none; }
   </style>
 </head>
-<body class="flex flex-col min-h-screen">
+<body class="flex flex-col">
 
-  <header class="sticky top-0 z-50 bg-space-900/90 backdrop-blur-md border-b border-cyan-950">
+  <header class="flex-shrink-0 z-50 bg-space-900/90 backdrop-blur-md border-b border-cyan-950">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <div class="w-10 h-10 rounded bg-gradient-to-tr from-brass via-yellow-400 to-amber-200 p-[2px]">
@@ -134,41 +186,42 @@
     </div>
   </header>
 
-  <main class="flex-grow w-full max-w-7xl mx-auto p-4 flex flex-col relative overflow-hidden">
+  <!-- 主內容區：吃掉 header 與 footer 以外的剩餘高度，本身不捲動 -->
+  <main class="flex-1 min-h-0 w-full max-w-7xl mx-auto p-3 lg:p-4 flex flex-col relative overflow-hidden">
     
-    <section id="tab-sim" class="flex-grow flex flex-col lg:flex-row gap-4 h-full">
+    <section id="tab-sim" class="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 lg:gap-4">
       
-      <!-- 畫布區 -->
-      <div class="flex-grow bg-space-800 rounded-xl neon-border relative flex flex-col min-h-[500px] lg:min-h-[750px] overflow-hidden">
+      <!-- 畫布區：高度跟著剩餘空間伸縮，不再使用固定最小高度 -->
+      <div class="flex-1 min-h-0 min-w-0 bg-space-800 rounded-xl neon-border relative overflow-hidden">
         <div class="absolute top-4 left-4 z-10 pointer-events-none">
           <h2 class="text-xl font-bold text-slate-200">2D 天球儀模擬器</h2>
           <p class="text-xs text-cyan-400 font-mono mt-1">齒輪連桿傳動系統投影</p>
         </div>
-        <!-- 加入 cursor-grab 以表示可拖曳平移 -->
-        <canvas id="orreryCanvas" class="w-full h-full cursor-grab rounded-xl"></canvas>
+        <!-- 絕對定位填滿容器，避免畫布本身把容器撐大 -->
+        <canvas id="orreryCanvas" class="absolute inset-0 w-full h-full block cursor-grab rounded-xl"></canvas>
       </div>
 
-      <!-- 控制面板 -->
-      <div class="w-full lg:w-80 flex flex-col gap-4">
+      <!-- 控制面板：直式時排成兩欄放在畫布下方，橫式時放在右側 -->
+      <div class="w-full lg:w-80 flex-shrink-0 grid grid-cols-3 gap-3 lg:flex lg:flex-col lg:gap-4 lg:min-h-0">
         <!-- 動力控制 -->
-        <div class="bg-space-800 p-5 rounded-xl border border-slate-700/80">
+        <div class="motor-panel col-span-1 lg:flex-shrink-0 bg-space-800 p-4 lg:p-5 rounded-xl border border-slate-700/80">
           <h3 class="text-sm font-bold text-brass flex items-center gap-2 mb-4 border-b border-slate-700 pb-2">
-            <span class="w-2 h-2 bg-brass rounded-full"></span>動力輸出控制 (Motor)
+            <span class="w-2 h-2 bg-brass rounded-full flex-shrink-0"></span>動力輸出控制 (Motor)
           </h3>
           <div class="flex justify-between items-end mb-2">
             <span class="text-xs text-slate-400">馬達轉速倍率</span>
             <span id="speedDisplay" class="font-mono text-lg font-bold text-cyan-400">1.0x</span>
           </div>
           <input type="range" id="motorSlider" min="0" max="20" step="0.5" value="1" oninput="updateMotorSpeed(this.value)">
-          <div class="mt-4 flex justify-between items-center text-xs text-slate-500 font-mono">
+          <div class="motor-scale mt-4 flex justify-between items-center text-xs text-slate-500 font-mono">
             <span>靜止(0x)</span>
             <span>極速(20x)</span>
           </div>
         </div>
 
-        <!-- 資訊面板 -->
-        <div class="bg-space-800 p-5 rounded-xl border border-cyan-900/50 flex-grow">
-          <h3 class="text-sm font-bold text-cyan-400 mb-4 border-b border-slate-700 pb-2">星體觀測數據</h3>
+        <!-- 資訊面板：空間不足時可在面板內滑動，但不顯示捲軸 -->
+        <div class="info-panel col-span-2 lg:flex-grow lg:min-h-0 bg-space-800 p-4 lg:p-5 rounded-xl border border-cyan-900/50 overflow-y-auto scrollbar-hide">
+          <h3 class="text-sm font-bold text-cyan-400 mb-3 border-b border-slate-700 pb-2">星體觀測數據</h3>
           <div id="planetInfo" class="space-y-3 text-sm">
             <!-- 動態生成 -->
             <p class="text-slate-400 text-xs">請點擊畫布中的星體檢視其公轉與傳動機構參數。</p>
@@ -177,37 +230,37 @@
       </div>
     </section>
 
-    <section id="tab-sort" class="hidden flex-grow flex flex-col gap-4 h-full relative">
+    <section id="tab-sort" class="hidden flex-1 min-h-0 flex-col gap-3 lg:gap-4 relative">
       
-      <div class="bg-space-800 p-4 rounded-xl border border-slate-700/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shadow-lg">
+      <div class="flex-shrink-0 bg-space-800 p-4 rounded-xl border border-slate-700/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 shadow-lg">
         <div>
           <h2 class="text-xl font-bold text-slate-100">行星軌道排列任務</h2>
           <p class="text-xs text-slate-400 mt-1">將下方的行星拖曳至上方正確的直線軌道插槽（由左至右：離太陽最近到最遠）。</p>
         </div>
-        <button onclick="initSortingGame()" class="px-4 py-2 bg-space-700 hover:bg-space-600 border border-slate-500 rounded text-sm text-slate-200 transition">重置挑戰</button>
+        <button onclick="initSortingGame()" class="px-4 py-2 bg-space-700 hover:bg-space-600 border border-slate-500 rounded text-sm text-slate-200 transition flex-shrink-0">重置挑戰</button>
       </div>
 
-      <!-- 直線軌道區 (可橫向捲動以適應手機) -->
-      <div class="w-full bg-[#0a0f1d] border border-cyan-900/60 rounded-xl overflow-x-auto shadow-inner h-[350px] sm:h-[400px] flex">
-        <div class="min-w-[800px] w-full h-full flex relative px-4">
+      <!-- 直線軌道區：寬度自動縮放塞進畫面，不再需要橫向捲動 -->
+      <div class="flex-1 min-h-0 w-full bg-[#0a0f1d] border border-cyan-900/60 rounded-xl overflow-hidden shadow-inner flex">
+        <div class="w-full h-full flex relative px-2 md:px-4">
           
           <!-- 左側太陽 -->
-          <div class="w-24 h-full relative flex-shrink-0 flex items-center justify-start border-r-2 border-amber-500/20">
+          <div class="w-16 md:w-24 h-full relative flex-shrink-0 flex items-center justify-start border-r-2 border-amber-500/20 overflow-hidden">
             <div class="absolute -left-16 w-32 h-64 rounded-r-full bg-gradient-to-r from-amber-500 via-yellow-400 to-transparent blur-[2px] shadow-[0_0_80px_rgba(255,200,0,0.4)] z-0"></div>
-            <span class="relative z-10 text-amber-900 font-black text-xl ml-2 drop-shadow-md" style="writing-mode: vertical-rl;">太陽 SUN</span>
+            <span class="relative z-10 text-amber-900 font-black text-lg md:text-xl ml-1 md:ml-2 drop-shadow-md" style="writing-mode: vertical-rl;">太陽 SUN</span>
           </div>
 
           <!-- 8條直線軌道 -->
-          <div class="flex-grow flex justify-around items-stretch py-8 pl-4 relative" id="orbit-tracks">
+          <div class="flex-grow min-w-0 flex justify-around items-stretch py-6 pl-2 md:pl-4 relative" id="orbit-tracks">
             <!-- 由 JS 動態生成 -->
           </div>
         </div>
       </div>
 
       <!-- 行星停泊庫 (零件區) -->
-      <div class="w-full bg-space-800 p-4 sm:p-6 rounded-xl border border-slate-700 flex flex-col min-h-[160px]">
+      <div class="flex-shrink-0 w-full bg-space-800 px-4 pt-4 pb-8 sm:px-6 rounded-xl border border-slate-700 flex flex-col">
         <h3 class="text-xs text-slate-400 font-mono mb-3">行星零件庫 (拖曳以下星體)</h3>
-        <div id="planet-pool" class="flex flex-wrap gap-4 sm:gap-6 justify-center sm:justify-start items-center relative">
+        <div id="planet-pool" class="flex flex-wrap gap-x-4 gap-y-8 sm:gap-x-6 justify-center sm:justify-start items-center relative min-h-[64px]">
           <!-- 由 JS 動態生成 -->
         </div>
       </div>
@@ -223,30 +276,30 @@
     </section>
   </main>
 
-  <footer class="w-full border-t border-cyan-950 bg-space-900/95 backdrop-blur z-40 mt-4 relative">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+  <footer class="flex-shrink-0 w-full border-t border-cyan-950 bg-space-900/95 backdrop-blur z-40 relative">
+    <div class="max-w-7xl mx-auto px-4 py-2 sm:py-3 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4">
       
       <!-- Logo 與團隊名稱 -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-3 flex-shrink-0">
 		<img src="./img/astro/meet_logo_2.jpg" class="w-8 h-8 rounded-full" />
-        <div class="text-sm text-slate-400">
+        <div class="text-sm text-slate-400 whitespace-nowrap">
           製作團隊：<span class="text-cyan-400 font-bold tracking-wider">域見未來</span> 
         </div>
       </div>
 
-      <!-- 不換行的 Slogan (加上 overflow-x-auto whitespace-nowrap 處理超出版面) -->
-	  <div class="w-full sm:w-1/3 text-center order-first sm:order-none mb-2 sm:mb-0 overflow-x-auto scrollbar-hide">
+      <!-- 不換行的 Slogan (超出版面時可滑動，但不顯示捲軸) -->
+	  <div class="w-full sm:w-auto sm:flex-1 min-w-0 text-center order-first sm:order-none overflow-x-auto scrollbar-hide">
         <p class="text-xs sm:text-sm text-cyan-500/70 font-tech tracking-[0em] uppercase whitespace-nowrap inline-block px-2">
 			  從好奇出發，讓探索沒有邊界。 跟著域見未來，一起發現更多學習的可能。
         </p>
       </div>
 
       <!-- IG 連結 -->
-      <a href="https://www.instagram.com/yujian_meetagain/" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-slate-400 hover:text-pink-500 transition-colors duration-300 group">
+      <a href="https://www.instagram.com/yujian_meetagain/" target="_blank" rel="noopener noreferrer" class="flex-shrink-0 flex items-center gap-2 text-slate-400 hover:text-pink-500 transition-colors duration-300 group">
         <span class="text-xs font-mono group-hover:text-pink-400 transition-colors">Follow Us</span>
         <!-- IG SVG Icon -->
         <svg class="w-5 h-5 drop-shadow-md" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill-rule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clip-rule="evenodd" />
+          <path fill-rule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.960-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.960-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clip-rule="evenodd" />
         </svg>
       </a>
     </div>
@@ -269,8 +322,11 @@
        頁籤切換邏輯
        ========================================================= */
     function switchTab(tab) {
-      document.getElementById('tab-sim').classList.toggle('hidden', tab !== 'sim');
-      document.getElementById('tab-sort').classList.toggle('hidden', tab !== 'sort');
+      const simTab = document.getElementById('tab-sim');
+      const sortTab = document.getElementById('tab-sort');
+      simTab.classList.toggle('hidden', tab !== 'sim');
+      sortTab.classList.toggle('hidden', tab !== 'sort');
+      sortTab.classList.toggle('flex', tab === 'sort');
       
       const navSim = document.getElementById('nav-sim');
       const navSort = document.getElementById('nav-sort');
@@ -297,6 +353,10 @@
     let moonAngle = 0; // 地球的月球公轉角度
     let lastTime = performance.now();
     let selectedIdx = 2; // 預設選地球
+
+    // 畫布的 CSS 尺寸 (繪圖座標以此為準，並依螢幕像素密度放大以保持清晰)
+    let viewW = 0;
+    let viewH = 0;
     
     // Canvas 拖曳平移 (Panning) 變數
     let panX = 0;
@@ -312,25 +372,42 @@
 
     function resizeCanvas() {
       const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
+      if (!rect.width || !rect.height) return; // 頁籤隱藏時略過
+      const dpr = window.devicePixelRatio || 1;
+      viewW = rect.width;
+      viewH = rect.height;
+      canvas.width = Math.round(viewW * dpr);
+      canvas.height = Math.round(viewH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
+    if (window.ResizeObserver) {
+      new ResizeObserver(resizeCanvas).observe(canvas.parentElement);
+    }
+
+    // 依畫布大小自動縮放軌道，讓整個太陽系完整塞進畫面
+    function getOrbitScale() {
+      const maxR = PLANETS[PLANETS.length - 1].r;
+      const fit = (Math.min(viewW, viewH) / 2 - 36) / maxR;
+      return Math.max(0.3, Math.min(1.2, fit));
+    }
 
     // 處理畫布點擊與拖曳
     canvas.addEventListener('pointerdown', (e) => {
       const rect = canvas.getBoundingClientRect();
-      const cx = canvas.width / 2 + panX;
-      const cy = canvas.height / 2 + panY;
+      const cx = viewW / 2 + panX;
+      const cy = viewH / 2 + panY;
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      const scale = getOrbitScale();
       
       let clickedPlanet = false;
       
       PLANETS.forEach((p, i) => {
-        const px = cx + Math.cos(angles[i]) * p.r * 1.2;
-        const py = cy + Math.sin(angles[i]) * p.r * 1.2;
-        if (Math.hypot(x - px, y - py) < 15) {
+        const px = cx + Math.cos(angles[i]) * p.r * scale;
+        const py = cy + Math.sin(angles[i]) * p.r * scale;
+        if (Math.hypot(x - px, y - py) < 20) {
           selectedIdx = i;
           updatePlanetInfo();
           clickedPlanet = true;
@@ -371,30 +448,33 @@
       const fileName = p.imgUrl.split('/').pop();
       const sourceUrl = 'https://commons.wikimedia.org/wiki/File:' + fileName;
 
+      // 直式畫面：照片在左、數據在右；橫式畫面：上下排列
       document.getElementById('planetInfo').innerHTML = `
-        <div class="flex items-center gap-2 mb-2">
+        <div class="flex items-center gap-2">
           <span class="w-4 h-4 rounded-full shadow-inner" style="background-color:${p.color}"></span>
           <span class="text-xl font-bold text-white">${p.name}</span>
           <span class="text-xs text-slate-400">${p.en}</span>
         </div>
-        
-        <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" title="點擊前往維基共享資源查看原始照片" class="w-full h-40 mb-3 rounded-lg overflow-hidden border border-cyan-900/50 hover:border-cyan-400 relative group bg-black flex justify-center items-center cursor-pointer transition-colors block">
-          <img src="${p.imgUrl}" alt="${p.name} 真實影像" class="w-full h-full object-contain py-1 opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" crossorigin="anonymous" />
-          <div class="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 rounded text-[9px] text-slate-400 font-mono backdrop-blur border border-white/10 shadow-lg">NASA / CC0</div>
-          
-          <!-- 右上角的外連提示圖示 -->
-          <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-md">
-            <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </div>
-        </a>
 
-        <div class="grid grid-cols-2 gap-2 text-xs font-mono mb-3">
-          <div class="bg-space-900 p-2 rounded">順序：第 ${p.id} 軌</div>
-          <div class="bg-space-900 p-2 rounded">週期：${p.period} 天</div>
-          <div class="bg-space-900 p-2 rounded text-cyan-400">轉速比：${p.ratio}</div>
-          <div class="bg-space-900 p-2 rounded text-brass">機構：${p.gear}</div>
+        <div class="flex flex-row lg:flex-col gap-3">
+          <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" title="點擊前往維基共享資源查看原始照片" class="planet-photo flex-shrink-0 rounded-lg overflow-hidden border border-cyan-900/50 hover:border-cyan-400 relative group bg-black flex justify-center items-center cursor-pointer transition-colors">
+            <img src="${p.imgUrl}" alt="${p.name} 真實影像" class="w-full h-full object-contain py-1 opacity-85 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" crossorigin="anonymous" />
+            <div class="absolute bottom-1 right-1 bg-black/70 px-1.5 py-0.5 rounded text-[9px] text-slate-400 font-mono backdrop-blur border border-white/10 shadow-lg">NASA / CC0</div>
+            
+            <!-- 右上角的外連提示圖示 -->
+            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-md">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <div class="flex-1 min-w-0 grid grid-cols-2 gap-2 text-xs font-mono content-start">
+            <div class="bg-space-900 p-2 rounded">順序：第 ${p.id} 軌</div>
+            <div class="bg-space-900 p-2 rounded">週期：${p.period} 天</div>
+            <div class="bg-space-900 p-2 rounded text-cyan-400">轉速比：${p.ratio}</div>
+            <div class="bg-space-900 p-2 rounded text-brass">機構：${p.gear}</div>
+          </div>
         </div>
         
         <div class="p-3 bg-cyan-950/30 border border-cyan-900/50 rounded-lg text-sm text-slate-300 leading-relaxed tracking-wide shadow-inner">
@@ -406,11 +486,12 @@
     function drawOrrery(now) {
       const dt = (now - lastTime) / 1000;
       lastTime = now;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, viewW, viewH);
       
       // 計算包含 panX, panY 偏移的中心點
-      const cx = canvas.width / 2 + panX;
-      const cy = canvas.height / 2 + panY;
+      const cx = viewW / 2 + panX;
+      const cy = viewH / 2 + panY;
+      const scale = getOrbitScale();
 
       // 繪製軌道與星體
       PLANETS.forEach((p, i) => {
@@ -420,7 +501,7 @@
           angles[i] += speedFactor * dt;
         }
 
-        const r = p.r * 1.2; // 縮放係數
+        const r = p.r * scale; // 依畫布大小自動縮放
         const px = cx + Math.cos(angles[i]) * r;
         const py = cy + Math.sin(angles[i]) * r;
         const planetRadius = 6 + (i * 0.5);
@@ -500,7 +581,7 @@
       });
 
       // 畫中央發光太陽
-      const sunRadius = 20;
+      const sunRadius = Math.max(12, 20 * Math.min(1, scale / 1.2 + 0.2));
       const sunGrd = ctx.createRadialGradient(cx - 5, cy - 5, 2, cx, cy, sunRadius);
       sunGrd.addColorStop(0, '#ffffff');
       sunGrd.addColorStop(0.2, '#ffea00');
@@ -532,14 +613,14 @@
       document.getElementById('success-banner').classList.add('hidden');
       correctCount = 0;
 
-      // 1. 生成直線軌道與插槽
+      // 1. 生成直線軌道與插槽 (插槽尺寸隨螢幕寬度縮放)
       trackContainer.innerHTML = '';
       for (let i = 1; i <= 8; i++) {
         const col = document.createElement('div');
-        col.className = 'relative flex flex-col justify-center items-center w-full border-l-[1.5px] border-dashed border-cyan-800/60 hover:bg-cyan-900/10 transition';
+        col.className = 'orbit-col relative flex flex-col justify-center items-center flex-1 min-w-0 border-l-[1.5px] border-dashed border-cyan-800/60 hover:bg-cyan-900/10 transition';
         col.innerHTML = `
-          <div class="absolute top-2 text-cyan-600/60 font-mono text-xs z-0">軌道 ${i}</div>
-          <div class="drop-zone w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-slate-600/80 bg-space-800/80 flex items-center justify-center relative z-10" data-orbit-id="${i}">
+          <div class="absolute top-0 text-cyan-600/60 font-mono text-xs z-0 whitespace-nowrap">軌道 ${i}</div>
+          <div class="drop-zone w-14 h-14 md:w-16 md:h-16 xl:w-20 xl:h-20 rounded-full border-2 border-slate-600/80 bg-space-800/80 flex items-center justify-center relative z-10" data-orbit-id="${i}">
             <span class="text-slate-600 text-xl font-bold opacity-50">${i}</span>
           </div>
         `;
@@ -584,102 +665,149 @@
       });
     }
 
+    // 拖曳狀態
+    let dragPointerId = null;
+    let dragOffsetX = 0, dragOffsetY = 0;   // 手指相對於星體中心的偏移，避免拿起時跳一下
+    let pendingX = 0, pendingY = 0;
+    let rafId = null;
+    let hoverZone = null;
+
+    // 由座標找到對應的插槽：放在插槽或整條軌道欄位上都算 (觸控更好放)
+    function findDropZone(x, y) {
+      const el = document.elementFromPoint(x, y);
+      if (!el) return null;
+      const zone = el.closest('.drop-zone') ||
+                   (el.closest('.orbit-col') ? el.closest('.orbit-col').querySelector('.drop-zone') : null);
+      return zone && !zone.classList.contains('locked') ? zone : null;
+    }
+
+    function setHoverZone(zone) {
+      if (zone === hoverZone) return;
+      if (hoverZone) hoverZone.classList.remove('drop-hover');
+      hoverZone = zone;
+      if (hoverZone) hoverZone.classList.add('drop-hover');
+    }
+
+    function moveGhost(x, y) {
+      // 用 transform 移動，不觸發版面重排，iPad 上也很順
+      dragGhostEl.style.transform =
+        `translate3d(${x - dragOffsetX}px, ${y - dragOffsetY}px, 0) translate(-50%, -50%) scale(1.1)`;
+    }
+
     function handleDragStart(e) {
-      if (e.target.closest('.locked') || isDragging) return;
-      
+      if (isDragging || e.currentTarget.classList.contains('locked')) return;
       // 確保是左鍵或觸控
       if (e.pointerType === 'mouse' && e.button !== 0) return;
-      
+      e.preventDefault();
+
       isDragging = true;
       dragSrcEl = e.currentTarget;
-      
-      // 建立跟隨指標的分身 (Ghost)
+      dragPointerId = e.pointerId;
+
+      const rect = dragSrcEl.getBoundingClientRect();
+      dragOffsetX = e.clientX - (rect.left + rect.width / 2);
+      dragOffsetY = e.clientY - (rect.top + rect.height / 2);
+
+      // 建立跟隨指標的分身：只保留外觀樣式，固定大小，不帶任何定位類別
       dragGhostEl = dragSrcEl.cloneNode(true);
-      dragGhostEl.classList.remove('draggable-planet');
-      dragGhostEl.classList.add('drag-ghost');
-      
-      // 隱藏原始物件的標籤避免干擾視線
-      dragSrcEl.classList.add('drag-source');
-      dragGhostEl.querySelector('span').style.display = 'none';
-
+      dragGhostEl.className = 'drag-ghost rounded-full flex items-center justify-center bg-space-900 border-2 border-cyan-400';
+      dragGhostEl.style.width = rect.width + 'px';
+      dragGhostEl.style.height = rect.height + 'px';
+      const ghostLabel = dragGhostEl.querySelector('span');
+      if (ghostLabel) ghostLabel.remove();
+      moveGhost(e.clientX, e.clientY);
       document.body.appendChild(dragGhostEl);
-      updateGhostPosition(e.clientX, e.clientY);
 
-      // 綁定全域移動與釋放事件 (設定 passive: false 以便 preventDefault)
+      dragSrcEl.classList.add('drag-source');
+
+      try { dragSrcEl.setPointerCapture(e.pointerId); } catch (_) {}
       document.addEventListener('pointermove', handleDragMove, { passive: false });
       document.addEventListener('pointerup', handleDragEnd);
       document.addEventListener('pointercancel', handleDragEnd);
-      
-      // 防止移動時發生原生拖曳或滾動
-      dragSrcEl.setPointerCapture(e.pointerId);
     }
 
     function handleDragMove(e) {
-      if (!isDragging || !dragGhostEl) return;
-      e.preventDefault(); // 防止手機滾動畫面的干擾
-      updateGhostPosition(e.clientX, e.clientY);
+      if (!isDragging || e.pointerId !== dragPointerId) return;
+      e.preventDefault(); // 防止 iPad 捲動畫面
+      pendingX = e.clientX;
+      pendingY = e.clientY;
+      // 每個畫面更新一次就好，減少卡頓
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          if (!dragGhostEl) return;
+          moveGhost(pendingX, pendingY);
+          setHoverZone(findDropZone(pendingX - dragOffsetX, pendingY - dragOffsetY));
+        });
+      }
     }
 
-    function updateGhostPosition(x, y) {
-      dragGhostEl.style.left = x + 'px';
-      dragGhostEl.style.top = y + 'px';
-    }
-
-    function handleDragEnd(e) {
-      if (!isDragging) return;
-      
-      // 移除監聽器
+    function cleanupDragListeners() {
       document.removeEventListener('pointermove', handleDragMove);
       document.removeEventListener('pointerup', handleDragEnd);
       document.removeEventListener('pointercancel', handleDragEnd);
-      dragSrcEl.releasePointerCapture(e.pointerId);
+      if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+      try { dragSrcEl.releasePointerCapture(dragPointerId); } catch (_) {}
+    }
 
-      const clientX = e.clientX;
-      const clientY = e.clientY;
+    function handleDragEnd(e) {
+      if (!isDragging || e.pointerId !== dragPointerId) return;
+      cleanupDragListeners();
+      setHoverZone(null);
 
-      // 移除分身
-      dragGhostEl.remove();
-      dragGhostEl = null;
+      const src = dragSrcEl;
+      const ghost = dragGhostEl;
       isDragging = false;
-      dragSrcEl.classList.remove('drag-source');
-
-      // 關鍵：使用 elementFromPoint 尋找放開位置的底層元素
-      // (因為分身有 pointer-events: none，所以不會被選到)
-      const targetEl = document.elementFromPoint(clientX, clientY);
-      const dropZone = targetEl ? targetEl.closest('.drop-zone') : null;
-
-      if (dropZone && !dropZone.classList.contains('locked')) {
-        const expectedId = dropZone.dataset.orbitId;
-        const planetId = dragSrcEl.dataset.planetId;
-
-        if (expectedId === planetId) {
-          // 放置正確：鎖定位置
-          dropZone.innerHTML = ''; // 清除數字
-          
-          // 調整外觀，移除絕對定位，將原始球體放入插槽
-          dragSrcEl.className = 'w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center relative locked pointer-events-none';
-          dragSrcEl.style.backgroundColor = 'transparent';
-          dragSrcEl.style.border = 'none';
-          dragSrcEl.style.boxShadow = 'none';
-          
-          dropZone.appendChild(dragSrcEl);
-          dropZone.classList.add('glow-success', 'locked');
-          
-          correctCount++;
-          checkWinCondition();
-        } else {
-          // 放置錯誤：觸發紅光閃爍，球體會自動保留在零件庫
-          dropZone.classList.remove('flash-error');
-          // 強制重繪以重啟動畫
-          void dropZone.offsetWidth;
-          dropZone.classList.add('flash-error');
-          dropZone.addEventListener('animationend', () => {
-            dropZone.classList.remove('flash-error');
-          }, {once: true});
-        }
-      }
-      // 如果沒放到插槽上，原本的 dragSrcEl 會留在 pool 裡，不需要特別處理
       dragSrcEl = null;
+      dragGhostEl = null;
+      dragPointerId = null;
+
+      // pointercancel (例如系統手勢打斷) 視同沒放下
+      const dropZone = e.type === 'pointercancel'
+        ? null
+        : findDropZone(e.clientX - dragOffsetX, e.clientY - dragOffsetY);
+
+      if (dropZone && dropZone.dataset.orbitId === src.dataset.planetId) {
+        // 放置正確：鎖定位置
+        ghost.remove();
+        src.classList.remove('drag-source');
+        dropZone.innerHTML = ''; // 清除數字
+
+        const placedLabel = src.querySelector('span');
+        if (placedLabel) placedLabel.remove();
+        src.className = 'w-full h-full rounded-full flex items-center justify-center relative locked pointer-events-none snap-in';
+        src.style.backgroundColor = 'transparent';
+        src.style.border = 'none';
+        src.style.boxShadow = 'none';
+
+        dropZone.appendChild(src);
+        dropZone.classList.add('glow-success', 'locked');
+
+        correctCount++;
+        checkWinCondition();
+        return;
+      }
+
+      if (dropZone) {
+        // 放置錯誤：插槽閃紅光
+        dropZone.classList.remove('flash-error');
+        void dropZone.offsetWidth; // 強制重繪以重啟動畫
+        dropZone.classList.add('flash-error');
+        dropZone.addEventListener('animationend', () => dropZone.classList.remove('flash-error'), { once: true });
+      }
+
+      // 沒放對：分身飛回零件庫原位再消失
+      const home = src.getBoundingClientRect();
+      dragOffsetX = 0; dragOffsetY = 0;
+      ghost.classList.add('returning');
+      requestAnimationFrame(() => {
+        moveGhost(home.left + home.width / 2, home.top + home.height / 2);
+        ghost.style.opacity = '0.4';
+      });
+      setTimeout(() => {
+        ghost.remove();
+        src.classList.remove('drag-source');
+      }, 260);
     }
 
     function checkWinCondition() {
