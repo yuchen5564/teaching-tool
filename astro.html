@@ -741,7 +741,8 @@
         // 更新角度 (以地球365天為基準，按比例算速度)
         if (motorSpeed > 0) {
           const speedFactor = (365 / p.period) * 0.5 * motorSpeed;
-          angles[i] += speedFactor * dt;
+          // Canvas 的 y 軸朝下，角度遞減在畫面上才是逆時針
+          angles[i] -= speedFactor * dt;
         }
 
         const r = p.r * scale; // 依畫布大小自動縮放
@@ -794,7 +795,7 @@
 
         // 繪製地球的月球系統
         if (p.id === 3) {
-          if (motorSpeed > 0) moonAngle += (13.3 * 0.5 * motorSpeed) * dt; 
+          if (motorSpeed > 0) moonAngle -= (13.3 * 0.5 * motorSpeed) * dt; // 月球同樣逆時針
           const moonOrbitR = planetRadius * 2.5;
           const mx = px + Math.cos(moonAngle) * moonOrbitR;
           const my = py + Math.sin(moonAngle) * moonOrbitR;
