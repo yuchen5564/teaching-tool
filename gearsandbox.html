@@ -52,6 +52,16 @@
 
     /* 畫布上的拖曳不觸發頁面捲動或縮放 */
     #gearCanvas { touch-action: none; }
+
+    /* 手轉模式：齒輪卡死轉不動時左右抖動 */
+    @keyframes gear-shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .gear-shake { animation: gear-shake 0.4s; }
   </style>
 
   <!-- React 18 與 htm（htm 讓我們不需要編譯就能用類似 HTML 的寫法描述畫面） -->
@@ -162,13 +172,14 @@
      * ============================================================ */
 
     /**
+     * 分析傳動關係。rootId = 從哪一顆齒輪開始推算（預設是馬達；手轉時是被手轉的那顆）
      * 每次齒輪被新增、移動、刪除時呼叫一次，回傳：
      *  nodes：每個齒輪的狀態（是否被帶動、轉速倍率、父齒輪…）
      *  links：所有嚙合 / 同軸的連接
      *  order：從馬達往外的順序，用來逐級推算角度
      *  jam / clash：是否有卡死、干涉
      */
-    function computeTopology(gears) {
+    function computeTopology(gears, rootId = null) {
       const byId = new Map(gears.map(g => [g.id, g]));
       const nodes = new Map();
       const adj = new Map();   // 鄰接表：每個齒輪連到哪些齒輪
@@ -217,17 +228,17 @@
         }
       }
 
-      // (2) 從馬達開始做廣度優先搜尋，建立「誰帶動誰」的傳動樹
+      // (2) 從起點（馬達或手轉的齒輪）做廣度優先搜尋，建立「誰帶動誰」的傳動樹
       const order = [];
       let jam = false;
-      const motor = gears.find(g => g.isMotor);
+      const start = rootId ? byId.get(rootId) : gears.find(g => g.isMotor);
 
-      if (motor) {
-        const root = nodes.get(motor.id);
+      if (start) {
+        const root = nodes.get(start.id);
         root.driven = true;
         root.ratio = 1;
-        const visited = new Set([motor.id]);
-        const queue = [motor];
+        const visited = new Set([start.id]);
+        const queue = [start];
 
         while (queue.length) {
           const cur = queue.shift();
@@ -443,6 +454,9 @@
       up:       ['M18 15l-6-6-6 6'],
       book:     ['M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z', 'M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z'],
       gauge:    ['M12 14l4-4', 'M3.3 19a10 10 0 1 1 17.4 0'],
+      move:     ['M5 9l-3 3 3 3', 'M9 5l3-3 3 3', 'M15 19l-3 3-3-3', 'M19 9l3 3-3 3', 'M2 12h20', 'M12 2v20'],
+      hand:     ['M18 11V6a2 2 0 0 0-4 0v5', 'M14 10V4a2 2 0 0 0-4 0v6', 'M10 10.5V6a2 2 0 0 0-4 0v8',
+                 'M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15'],
     };
 
     function Icon({ name, className = 'w-4 h-4' }) {
@@ -456,7 +470,8 @@
     /* ============================================================
      * 8. 單一齒輪的畫法
      * ============================================================ */
-    function GearView({ gear, node, selected, spinRpm, clockwise, opts, onPointerDown, registerRotor }) {
+    function GearView({ gear, node, selected, spinRpm, clockwise, opts, onPointerDown, registerRotor,
+                        crankMode, shaking, registerCounter }) {
       const r = radiusOf(gear.teeth);
       const hasError = node.jammed || node.clashed;
       const isBack = gear.layer === 1;
@@ -479,8 +494,9 @@
       return html`
         <g transform=${`translate(${gear.x} ${gear.y})`}
            opacity=${isBack ? 0.55 : 1}
-           className="cursor-grab active:cursor-grabbing"
+           className=${crankMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}
            onPointerDown=${onPointerDown}>
+         <g className=${shaking ? 'gear-shake' : undefined}>
 
           <!-- 陰影 -->
           <circle cx="3" cy="5" r=${r + ADDENDUM} fill="#000" opacity="0.35" />
@@ -509,6 +525,10 @@
             ${gear.isMotor
               ? html`<path d=${`M -5 ${-r + 12} L 5 ${-r + 12} L 0 ${-r + 2} Z`} fill="#fef08a" opacity="0.9" />`
               : html`<line x1="0" y1="-7" x2="0" y2=${-(r * 0.42)} stroke=${stroke} strokeWidth="2" opacity="0.6" />`}
+
+            <!-- 手轉模式：白色把手，方便看出轉了幾圈 -->
+            ${crankMode && html`
+              <circle cx="0" cy=${-r * 0.72} r=${Math.max(3.5, r * 0.09)} fill="#f8fafc" stroke=${stroke} strokeWidth="1.5" />`}
           </g>
 
           <!-- 馬達標記 -->
@@ -523,12 +543,17 @@
               <path d=${arrow.head} fill=${arrowColor} />
             </g>`}
 
-          <!-- 齒數與轉速標籤 -->
-          ${opts.showLabels && html`
-            <text y=${r + ADDENDUM + 17} textAnchor="middle" fontSize="11"
-                  fill=${hasError ? '#fca5a5' : '#94a3b8'} pointerEvents="none" style=${{ userSelect: 'none' }}>
-              ${gear.teeth}齒${isBack ? '・後' : ''} · ${fmt(spinRpm, 1)} rpm
-            </text>`}
+          <!-- 齒數與轉速標籤（手轉模式改顯示圈數，文字由動畫迴圈即時填入） -->
+          ${opts.showLabels && (crankMode
+            ? html`
+              <text ref=${el => registerCounter(gear.id, el)} y=${r + ADDENDUM + 17} textAnchor="middle" fontSize="11"
+                    fill=${hasError ? '#fca5a5' : '#6ee7b7'} pointerEvents="none" style=${{ userSelect: 'none' }}></text>`
+            : html`
+              <text y=${r + ADDENDUM + 17} textAnchor="middle" fontSize="11"
+                    fill=${hasError ? '#fca5a5' : '#94a3b8'} pointerEvents="none" style=${{ userSelect: 'none' }}>
+                ${gear.teeth}齒${isBack ? '・後' : ''} · ${fmt(spinRpm, 1)} rpm
+              </text>`)}
+         </g>
         </g>`;
     }
 
@@ -686,6 +711,64 @@
     }
 
     /* ============================================================
+     * 11-2. 側邊面板：手轉觀察（即時列出每顆齒輪轉了幾圈）
+     * ============================================================ */
+    function CrankPanel({ rows, hasDriver, jammed, onReset, registerCell }) {
+      const tagClass = (r) => r.isDriver ? 'bg-emerald-500/20 text-emerald-200'
+        : r.isMotor ? 'bg-amber-500/20 text-amber-200'
+        : 'bg-sky-500/15 text-sky-200';
+
+      return html`
+        <section className="bg-slate-900/90 backdrop-blur border border-emerald-800/70 rounded-lg p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold tracking-widest text-emerald-300 flex items-center gap-1.5">
+              <${Icon} name="hand" /> 手轉觀察
+            </h2>
+            <button onClick=${onReset}
+                    className="text-xs px-2 py-0.5 rounded border border-slate-600 bg-slate-800 hover:bg-slate-700">
+              計數歸零
+            </button>
+          </div>
+
+          ${!hasDriver ? html`
+            <p className="text-xs text-slate-400 leading-relaxed">
+              按住任一顆齒輪，<span className="text-slate-200 font-semibold">繞著它的中心拖動</span>，就能用手轉它。
+              換不同的齒輪轉轉看，比較每顆齒輪各轉了幾圈。
+            </p>`
+
+          : jammed ? html`
+            <p className="text-xs text-red-300">這組齒輪卡死或互相重疊，轉不動。</p>`
+
+          : html`
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-slate-400 text-left">
+                  <th className="font-normal py-1">齒輪</th>
+                  <th className="font-normal text-right">圈數</th>
+                  <th className="font-normal text-right">方向</th>
+                  <th className="font-normal text-right">齒數×圈數</th>
+                </tr>
+              </thead>
+              <tbody className="font-mono">
+                ${rows.map(r => html`
+                  <tr key=${r.id} className="border-t border-slate-800">
+                    <td className="py-1 whitespace-nowrap">
+                      <span className=${`px-1.5 rounded ${tagClass(r)}`}>${r.teeth}${r.isBack ? '後' : ''}</span>
+                      ${r.isDriver && html`<span className="ml-1 text-emerald-300 font-sans">主動</span>`}
+                    </td>
+                    <td className="text-right" ref=${el => registerCell('t-' + r.id, el)}></td>
+                    <td className="text-right font-sans text-slate-300">${r.isDriver ? '—' : r.same ? '同向' : '反向'}</td>
+                    <td className="text-right" ref=${el => registerCell('p-' + r.id, el)}></td>
+                  </tr>`)}
+              </tbody>
+            </table>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              規律：咬合的兩顆齒輪轉過的「齒數」一樣多，所以 齒數 × 圈數 相同、轉向相反；同軸的齒輪圈數相同、轉向相同。
+            </p>`}
+        </section>`;
+    }
+
+    /* ============================================================
      * 12. 說明視窗
      * ============================================================ */
     function HelpDialog({ onClose }) {
@@ -705,6 +788,7 @@
               <li>點選齒輪可在右側面板調整齒數、圖層，並查看轉速計算過程。</li>
               <li>雙擊（或連點兩下）齒輪即可刪除；馬達無法刪除。</li>
               <li>把齒輪移到「後層」並拖到前層齒輪的中心，就成為同軸複合齒輪。</li>
+              <li>切到「手轉」模式後，按住任一顆齒輪繞著中心拖動，就能用手轉它；右側面板會即時列出每顆齒輪轉了幾圈。</li>
             </ul>
 
             <div>
@@ -715,6 +799,7 @@
                 <span><${Key}>L<//> 切換圖層</span>
                 <span><${Key}>Delete<//> 刪除</span>
                 <span><${Key}>Esc<//> 取消選取</span>
+                <span><${Key}>C<//> 切換移動／手轉</span>
               </div>
             </div>
 
@@ -744,7 +829,7 @@
 
             <!-- Logo 與團隊名稱 -->
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <img src="./img/gearsandbox/meet_logo_2.jpg" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" alt="域見未來" />
+              <img src="./img/astro/meet_logo_2.jpg" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full" alt="域見未來" />
               <div className="text-xs sm:text-sm text-slate-400 whitespace-nowrap">
                 製作團隊：<span className="text-cyan-400 font-bold tracking-wider">域見未來</span>
               </div>
@@ -798,14 +883,42 @@
       const [presetOpen, setPresetOpen] = useState(false);
       const [presetPos, setPresetPos] = useState({ left: 16, top: 64 });
 
+      // 手轉模式
+      const [mode, setMode] = useState('move');                   // 'move' 移動 / 'crank' 手轉
+      const [observeId, setObserveId] = useState(null);           // 最近一次手轉的齒輪（觀察表的主動輪）
+      const [shakeId, setShakeId] = useState(null);               // 轉不動時抖動的齒輪
+      const [toast, setToast] = useState(null);                   // 短暫提示訊息
+      const modeRef = useRef(mode);
+      const crankRef = useRef(null);                              // 手轉中：{ id, topo, last }
+      const baseAngles = useRef(new Map());                       // 圈數計算的起點角度
+      const counterRefs = useRef(new Map());                      // 齒輪下方的圈數標籤
+      const cellRefs = useRef(new Map());                         // 觀察表中的圈數 / 齒數×圈數欄位
+      const toastTimer = useRef(0);
+      useEffect(() => { modeRef.current = mode; }, [mode]);
+
       // 動畫迴圈需要最新的馬達設定，用 ref 同步一份
       const motion = useRef({ running, rpm, dir });
       useEffect(() => { motion.current = { running, rpm, dir }; }, [running, rpm, dir]);
 
+      /**
+       * 換一個起點重新推算角度時，齒輪可能被「整圈」或「整齒」地平移：畫面看起來完全一樣，
+       * 但圈數計數會跳。這裡把這個平移量同步加到起點角度上，讓圈數不受影響。
+       */
+      const applyKeepingCounters = useCallback((topo) => {
+        const before = new Map(gearsRef.current.map(g => [g.id, g.angle]));
+        applyKinematics(topo);
+        for (const g of gearsRef.current) {
+          const shift = g.angle - before.get(g.id);
+          if (shift !== 0 && baseAngles.current.has(g.id)) {
+            baseAngles.current.set(g.id, baseAngles.current.get(g.id) + shift);
+          }
+        }
+      }, []);
+
       // 結構改變後：重新分析傳動關係並重繪
       const commit = useCallback(() => {
         const topo = computeTopology(gearsRef.current);
-        applyKinematics(topo);
+        applyKeepingCounters(topo);
         topoRef.current = topo;
         setVersion(v => v + 1);
       }, []);
@@ -814,6 +927,39 @@
         if (el) rotorRefs.current.set(id, el);
         else rotorRefs.current.delete(id);
       }, []);
+      const registerCounter = useCallback((id, el) => {
+        if (el) counterRefs.current.set(id, el);
+        else counterRefs.current.delete(id);
+      }, []);
+      const registerCell = useCallback((key, el) => {
+        if (el) cellRefs.current.set(key, el);
+        else cellRefs.current.delete(key);
+      }, []);
+
+      // 圈數歸零：以每顆齒輪目前的角度作為新的起點
+      const resetCounters = useCallback(() => {
+        baseAngles.current.clear();
+        gearsRef.current.forEach(g => baseAngles.current.set(g.id, g.angle));
+      }, []);
+
+      const showToast = (msg) => {
+        setToast(msg);
+        clearTimeout(toastTimer.current);
+        toastTimer.current = setTimeout(() => setToast(null), 1800);
+      };
+
+      // 切換「移動 / 手轉」模式；進入手轉時先暫停馬達，方便觀察
+      const switchMode = (next) => {
+        if (next === mode) return;
+        crankRef.current = null;
+        interaction.current = { mode: 'idle' };
+        setMode(next);
+        if (next === 'crank') {
+          setRunning(false);
+          resetCounters();
+          setObserveId(null);
+        }
+      };
 
       /* ---------- 動畫迴圈：每一幀轉動馬達，並推算其他齒輪的角度 ---------- */
       useEffect(() => {
@@ -823,19 +969,43 @@
         const frame = (t) => {
           const dt = Math.min((t - last) / 1000, 0.05);   // 秒；切回分頁時避免一次跳太多
           last = t;
-          const topo = topoRef.current;
-          const { running: on, rpm: speed, dir: d } = motion.current;
+          const crank = crankRef.current;
 
-          const motor = gearsRef.current.find(g => g.isMotor);
-          if (motor && on) {
-            const motorNode = topo.nodes.get(motor.id);
-            if (motorNode && !motorNode.frozen) motor.angle += d * speed * (Math.PI * 2 / 60) * dt;
+          if (crank) {
+            // 手轉中：被轉的齒輪角度由手指決定，其他齒輪從它往外推算
+            applyKinematics(crank.topo);
+          } else {
+            // 一般情況：由馬達帶動
+            const topo = topoRef.current;
+            const { running: on, rpm: speed, dir: d } = motion.current;
+            const motor = gearsRef.current.find(g => g.isMotor);
+            if (motor && on) {
+              const motorNode = topo.nodes.get(motor.id);
+              if (motorNode && !motorNode.frozen) motor.angle += d * speed * (Math.PI * 2 / 60) * dt;
+            }
+            applyKinematics(topo);
           }
-          applyKinematics(topo);
 
           for (const g of gearsRef.current) {
             const el = rotorRefs.current.get(g.id);
             if (el) el.setAttribute('transform', `rotate(${((g.angle * 180) / Math.PI).toFixed(3)})`);
+          }
+
+          // 手轉模式：更新每顆齒輪的圈數（順時針 ↻、逆時針 ↺）
+          if (modeRef.current === 'crank') {
+            for (const g of gearsRef.current) {
+              if (!baseAngles.current.has(g.id)) baseAngles.current.set(g.id, g.angle);
+              const turns = (g.angle - baseAngles.current.get(g.id)) / (Math.PI * 2);
+              const abs = Math.abs(turns);
+              const arrow = turns > 0.005 ? ' ↻' : turns < -0.005 ? ' ↺' : '';
+
+              const label = counterRefs.current.get(g.id);
+              if (label) label.textContent = `${g.teeth}齒${g.layer === 1 ? '・後' : ''} · ${abs.toFixed(2)} 圈${arrow}`;
+              const turnCell = cellRefs.current.get('t-' + g.id);
+              if (turnCell) turnCell.textContent = abs.toFixed(2) + arrow;
+              const productCell = cellRefs.current.get('p-' + g.id);
+              if (productCell) productCell.textContent = (abs * g.teeth).toFixed(1);
+            }
           }
           raf = requestAnimationFrame(frame);
         };
@@ -1026,7 +1196,8 @@
         const pts = [...pointers.current.values()];
         if (!ctm || pts.length < 2) return;
 
-        // 若正在拖曳齒輪，先讓它就地吸附並結束拖曳
+        // 若正在拖曳齒輪，先讓它就地吸附並結束拖曳；若正在手轉，停止手轉
+        crankRef.current = null;
         const it = interaction.current;
         if (it.mode === 'drag') {
           const g = gearsRef.current.find(x => x.id === it.id);
@@ -1061,11 +1232,16 @@
 
       /* ---------- 指標事件（滑鼠與觸控共用） ---------- */
 
-      // 按下齒輪：開始拖曳（連按兩下則刪除）
+      // 按下齒輪：移動模式 → 開始拖曳（連按兩下則刪除）；手轉模式 → 開始手轉
       const onGearPointerDown = (e, id) => {
         e.stopPropagation();
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         if (trackPointer(e)) return;
+
+        if (mode === 'crank') {
+          startCrank(e, id);
+          return;
+        }
 
         const now = performance.now();
         if (lastTap.current.id === id && now - lastTap.current.t < 320) {
@@ -1082,6 +1258,37 @@
         gearsRef.current = gearsRef.current.filter(x => x.id !== id).concat(g);   // 移到最上層
         setSelectedId(id);
         commit();
+      };
+
+      /* ---------- 手轉 ----------
+       * 以被按住的齒輪為起點重新分析傳動關係，之後手指繞著齒輪中心轉多少角度，
+       * 齒輪就轉多少，相連的齒輪（包含馬達）依齒數比跟著轉。
+       */
+      const startCrank = (e, id) => {
+        setSelectedId(id);
+        const g = gearsRef.current.find(x => x.id === id);
+        if (!g) return;
+
+        // 換了一顆主動輪 → 圈數重新計算
+        if (observeId !== id) {
+          resetCounters();
+          setObserveId(id);
+        }
+
+        const topo = computeTopology(gearsRef.current, id);
+        const node = topo.nodes.get(id);
+        if (node.frozen) {
+          setShakeId(id);
+          setTimeout(() => setShakeId(null), 450);
+          showToast(node.clashed ? '這顆齒輪和別的齒輪重疊了，轉不動！' : '這組齒輪卡死了，轉不動！');
+          interaction.current = { mode: 'idle' };
+          return;
+        }
+
+        applyKeepingCounters(topo);   // 改以這顆齒輪為起點
+        const p = toSvg(e.clientX, e.clientY);
+        crankRef.current = { id, topo, last: Math.atan2(p.y - g.y, p.x - g.x) };
+        interaction.current = { mode: 'crank', id };
       };
 
       // 按下空白處：準備平移畫面
@@ -1105,6 +1312,18 @@
           const w = clamp(it.w0 * (it.d0 / d), 300, 3000);
           const s = it.s0 * (it.w0 / w);
           setView({ x: it.px - (mx - it.cx) / s, y: it.py - (my - it.cy) / s, w });
+        } else if (it.mode === 'crank') {
+          const crank = crankRef.current;
+          if (!crank) return;
+          const g = crank.topo.byId.get(crank.id);
+          const p = toSvg(e.clientX, e.clientY);
+          if (Math.hypot(p.x - g.x, p.y - g.y) < 6) return;   // 太靠近中心時角度不穩定，略過
+          const a = Math.atan2(p.y - g.y, p.x - g.x);
+          let delta = a - crank.last;
+          if (delta > Math.PI) delta -= Math.PI * 2;           // 跨過 ±180° 時接續角度
+          else if (delta < -Math.PI) delta += Math.PI * 2;
+          g.angle += delta;
+          crank.last = a;
         } else if (it.mode === 'drag') {
           const g = gearsRef.current.find(x => x.id === it.id);
           if (!g) return;
@@ -1130,6 +1349,12 @@
           if (pointers.current.size < 2) interaction.current = { mode: 'idle' };
           return;
         }
+        if (it.mode === 'crank') {
+          crankRef.current = null;
+          interaction.current = { mode: 'idle' };
+          commit();   // 以新的角度重新建立馬達的傳動關係
+          return;
+        }
         if (it.mode === 'drag') {
           const g = gearsRef.current.find(x => x.id === it.id);
           if (g) snapGear(g);
@@ -1149,6 +1374,7 @@
           else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) removeGear(selectedId);
           else if ((e.key === 'l' || e.key === 'L') && selectedId) toggleLayer(selectedId);
           else if (e.key === 'r' || e.key === 'R') setDir(d => (d === 1 ? -1 : 1));
+          else if (e.key === 'c' || e.key === 'C') switchMode(mode === 'crank' ? 'move' : 'crank');
           else if (e.key === 'Escape') { setSelectedId(null); setHelpOpen(false); setPresetOpen(false); }
         };
         window.addEventListener('keydown', onKey);
@@ -1190,8 +1416,28 @@
         }
       }
 
+      // 手轉觀察表：從主動輪開始，列出所有被它帶動的齒輪
+      let crankRows = [];
+      let crankJammed = false;
+      const hasDriver = mode === 'crank' && !!observeId && topo.byId.has(observeId);
+      if (hasDriver) {
+        const ot = computeTopology(gears, observeId);
+        crankJammed = ot.nodes.get(observeId).frozen;
+        crankRows = [observeId, ...ot.order].map(id => {
+          const g = ot.byId.get(id);
+          return {
+            id,
+            teeth: g.teeth,
+            isBack: g.layer === 1,
+            isMotor: g.isMotor,
+            isDriver: id === observeId,
+            same: ot.nodes.get(id).ratio > 0,   // 與主動輪同向？
+          };
+        });
+      }
+
       const viewH = view.w * ASPECT;
-      const toolBtn = 'bg-slate-800 hover:bg-slate-700 transition-colors rounded border border-slate-600';
+      const toolBtn ='bg-slate-800 hover:bg-slate-700 transition-colors rounded border border-slate-600';
 
       /* ============================================================
        * 畫面
@@ -1229,6 +1475,20 @@
               <${Icon} name=${presetOpen ? 'up' : 'down'} className="w-4 h-4 ml-1" />
             </button>
 
+            <!-- 模式切換：移動 / 手轉 -->
+            <div className="flex items-center shrink-0 rounded border border-slate-600 overflow-hidden">
+              <button onClick=${() => switchMode('move')} title="移動模式：拖曳齒輪改變位置（快捷鍵 C）"
+                      className=${`flex items-center gap-1 px-3 py-1.5 text-sm whitespace-nowrap transition-colors ${mode === 'move'
+                        ? 'bg-cyan-600/30 text-cyan-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
+                <${Icon} name="move" /> 移動
+              </button>
+              <button onClick=${() => switchMode('crank')} title="手轉模式：按住齒輪繞圈拖動來轉它（快捷鍵 C）"
+                      className=${`flex items-center gap-1 px-3 py-1.5 text-sm whitespace-nowrap transition-colors border-l border-slate-600 ${mode === 'crank'
+                        ? 'bg-emerald-600/30 text-emerald-200' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}>
+                <${Icon} name="hand" /> 手轉
+              </button>
+            </div>
+
             <!-- 縮放 -->
             <div className="flex items-center gap-1 shrink-0">
               <button onClick=${() => zoomBy(0.8)}  title="放大"     className=${`p-2 ${toolBtn}`}><${Icon} name="zoomIn" /></button>
@@ -1263,6 +1523,16 @@
               <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/90 border border-red-400 text-white px-5 py-2 rounded-full shadow-[0_0_15px_rgba(220,38,38,0.6)] flex items-center gap-2 z-20 max-w-[90%] pointer-events-none">
                 <${Icon} name="alert" className="w-5 h-5 shrink-0" />
                 <span className="text-sm font-semibold">${errorMsg}</span>
+              </div>`}
+
+            <!-- 手轉模式提示 / 轉不動的提示 -->
+            ${toast ? html`
+              <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-amber-400/95 text-slate-950 px-4 py-1.5 rounded-full shadow-lg text-sm font-bold z-20 pointer-events-none whitespace-nowrap">
+                ${toast}
+              </div>`
+            : mode === 'crank' && !observeId && !errorMsg && html`
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-emerald-900/90 border border-emerald-600/60 text-emerald-100 px-4 py-1.5 rounded-full text-sm z-20 pointer-events-none max-w-[90%] text-center">
+                手轉模式：按住任一顆齒輪，繞著中心拖動來轉它
               </div>`}
 
             <svg id="gearCanvas" ref=${svgRef}
@@ -1323,7 +1593,10 @@
                     clockwise=${node.ratio * dir > 0}
                     opts=${opts}
                     onPointerDown=${e => onGearPointerDown(e, g.id)}
-                    registerRotor=${registerRotor} />`;
+                    registerRotor=${registerRotor}
+                    crankMode=${mode === 'crank'}
+                    shaking=${shakeId === g.id}
+                    registerCounter=${registerCounter} />`;
               })}
 
               <!-- 嚙合接觸點 -->
@@ -1343,6 +1616,10 @@
               <span className="text-slate-400">被帶動 ${drivenCount}</span>
               <span className="text-slate-600">|</span>
               <span className="text-slate-400">縮放 ${Math.round((1000 / view.w) * 100)}%</span>
+              <span className="text-slate-600">|</span>
+              <span className=${mode === 'crank' ? 'text-emerald-300 font-semibold' : 'text-slate-400'}>
+                ${mode === 'crank' ? '手轉模式' : '移動模式'}
+              </span>
             </div>
 
             <!-- 右側控制面板 -->
@@ -1359,6 +1636,14 @@
                     dir=${dir} setDir=${setDir}
                     rpm=${rpm} setRpm=${setRpm}
                     motorFrozen=${motorFrozen} />
+
+                  ${mode === 'crank' && html`
+                    <${CrankPanel}
+                      rows=${crankRows}
+                      hasDriver=${hasDriver}
+                      jammed=${crankJammed}
+                      onReset=${resetCounters}
+                      registerCell=${registerCell} />`}
 
                   ${selected && html`
                     <${GearInfoPanel}
