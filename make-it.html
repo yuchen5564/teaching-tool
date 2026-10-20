@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAKE IT!｜創客 × 創新 × 創業互動實驗室</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#132535',       /* 深藍綠：主要文字與沉穩元素 */
+              teal: '#2BA99B',       /* 青綠色：Maker 與成功狀態 */
+              yellow: '#F4C542',     /* 暖黃色：重要 CTA、Innovation 與提醒 */
+              gray: '#D9D9D9',       /* 淺灰色：邊框與停用狀態 */
+              bg: '#F7F6F2'          /* 米白色：主背景 */
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #F7F6F2;
+      color: #132535;
+      font-family: 'Noto Sans TC', sans-serif;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* 輕微按鈕微調與無多餘漸層規範 */
+    .btn-press {
+      transition: transform 0.1s ease, background-color 0.15s ease;
+    }
+    .btn-press:active {
+      transform: scale(0.97);
+    }
+
+    /* Shuffle 動畫效果 */
+    @keyframes cardShuffle {
+      0% { transform: translateY(0px) rotate(0deg); opacity: 1; }
+      25% { transform: translateY(-16px) rotate(-3deg); opacity: 0.7; }
+      50% { transform: translateY(12px) rotate(2deg); opacity: 0.5; }
+      75% { transform: translateY(-8px) rotate(-1deg); opacity: 0.8; }
+      100% { transform: translateY(0px) rotate(0deg); opacity: 1; }
+    }
+    .shuffling {
+      animation: cardShuffle 0.28s ease-in-out infinite;
+    }
+
+    /* 淡入淡出轉場 */
+    .fade-enter {
+      animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 隱藏滾動條但保留滑動 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-[#F4C542] selection:text-[#132535]">
+
+  <!-- Top Navigation Header -->
+  <header class="w-full bg-[#F7F6F2] border-b border-[#D9D9D9] sticky top-0 z-30 px-4 py-3 sm:px-8">
+    <div class="max-w-5xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-2.5 cursor-pointer" onclick="goToStep(0)">
+        <span class="inline-block w-3.5 h-3.5 rounded-full bg-[#2BA99B]"></span>
+        <span class="font-black text-lg sm:text-xl tracking-tight text-[#132535]">MAKE IT!</span>
+        <span class="hidden sm:inline-block text-xs px-2 py-0.5 rounded-full bg-[#132535]/5 text-[#132535] font-medium border border-[#D9D9D9]">
+          創客 × 創新 × 創業互動實驗室
+        </span>
+      </div>
+
+      <!-- Quick Step Indicator / Nav -->
+      <div class="flex items-center space-x-1 sm:space-x-1.5 text-xs font-bold text-[#132535]">
+        <button id="nav-btn-0" onclick="goToStep(0)" class="px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] transition">首頁</button>
+        <button id="nav-btn-1" onclick="goToStep(1)" class="px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] transition">這算什麼？</button>
+        <button id="nav-btn-2" onclick="goToStep(2)" class="px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] transition">點子成長記</button>
+        <button id="nav-btn-3" onclick="goToStep(3)" class="px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] transition">挑戰抽卡</button>
+        <button id="nav-btn-4" onclick="goToStep(4)" class="px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] transition">計時器</button>
+        <button id="nav-btn-5" onclick="goToStep(5)" class="px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] transition">Pitch</button>
+        <button id="nav-btn-6" onclick="goToStep(6)" class="px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] transition">總結</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content View Area -->
+  <main class="flex-1 w-full max-w-5xl mx-auto px-4 py-6 sm:py-10 flex flex-col justify-center">
+
+    <!-- ==========================================
+         STEP 0: START 首頁
+    =========================================== -->
+    <section id="view-step-0" class="view-panel fade-enter flex flex-col items-center text-center justify-center py-8 sm:py-16">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#D9D9D9] text-xs font-bold tracking-wider text-[#132535] mb-6">
+        <i data-lucide="compass" class="w-4 h-4 text-[#2BA99B]"></i>
+        <span>60–70 MIN WORKSHOP LAB</span>
+      </div>
+
+      <h1 class="text-5xl sm:text-7xl font-black text-[#132535] tracking-tight mb-3">
+        MAKE IT!
+      </h1>
+
+      <div class="text-xl sm:text-2xl font-bold text-[#132535] mb-4">
+        創客 × 創新 × 創業<br class="sm:hidden"> 互動實驗室
+      </div>
+
+      <p class="text-base sm:text-lg text-[#132535]/80 max-w-md mx-auto mb-10 font-medium leading-relaxed">
+        「一個好點子，要走多遠才能變成創新？」
+      </p>
+
+      <!-- Main Action CTA -->
+      <button onclick="goToStep(1)" class="btn-press w-full max-w-xs py-4 px-8 rounded-2xl bg-[#F4C542] hover:bg-[#ebd532] text-[#132535] font-black text-lg border-2 border-[#132535] shadow-sm flex items-center justify-center gap-2">
+        <span>開始挑戰</span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Three Pillars Simple Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-2xl mt-12 text-left">
+        <div class="p-4 rounded-xl bg-white border border-[#D9D9D9]">
+          <span class="text-xs font-black text-[#2BA99B] block mb-1">MAKER</span>
+          <p class="text-sm font-bold text-[#132535]">把想法做出來</p>
+        </div>
+        <div class="p-4 rounded-xl bg-white border border-[#D9D9D9]">
+          <span class="text-xs font-black text-[#F4C542] block mb-1">INNOVATION</span>
+          <p class="text-sm font-bold text-[#132535]">讓解決方法變得更好</p>
+        </div>
+        <div class="p-4 rounded-xl bg-white border border-[#D9D9D9]">
+          <span class="text-xs font-black text-[#132535] block mb-1">ENTREPRENEURSHIP</span>
+          <p class="text-sm font-bold text-[#132535]">讓價值真正走進生活</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         STEP 1: 互動一：這算什麼？
+    =========================================== -->
+    <section id="view-step-1" class="view-panel hidden fade-enter max-w-2xl mx-auto w-full">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-[#2BA99B]/15 text-[#2BA99B] text-xs font-black">互動一</span>
+          <h2 class="text-lg font-bold text-[#132535]">這算什麼？情境判斷題</h2>
+        </div>
+        <span id="quiz-progress-text" class="text-xs font-bold text-[#132535]/60 font-mono">1 / 5</span>
+      </div>
+
+      <!-- Question Card -->
+      <div class="bg-white border-2 border-[#132535] rounded-2xl p-6 sm:p-8 mb-6 shadow-sm min-h-[170px] flex flex-col justify-center">
+        <span class="text-xs font-bold text-[#132535]/50 block mb-2 font-mono">SCENARIO</span>
+        <p id="quiz-question-text" class="text-xl sm:text-2xl font-bold text-[#132535] leading-relaxed">
+          載入題目中...
+        </p>
+      </div>
+
+      <!-- 3 Choices Buttons -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6" id="quiz-options-group">
+        <button onclick="handleAnswer('maker')" id="btn-opt-maker" class="btn-press py-3.5 px-4 rounded-xl bg-white border-2 border-[#D9D9D9] hover:border-[#132535] text-[#132535] font-bold text-sm text-center transition flex flex-col items-center justify-center gap-1">
+          <span class="text-xs text-[#2BA99B] font-black">MAKER</span>
+          <span class="text-base font-bold">創客</span>
+        </button>
+        <button onclick="handleAnswer('innovation')" id="btn-opt-innovation" class="btn-press py-3.5 px-4 rounded-xl bg-white border-2 border-[#D9D9D9] hover:border-[#132535] text-[#132535] font-bold text-sm text-center transition flex flex-col items-center justify-center gap-1">
+          <span class="text-xs text-[#F4C542] font-black">INNOVATION</span>
+          <span class="text-base font-bold">創新</span>
+        </button>
+        <button onclick="handleAnswer('entrepreneurship')" id="btn-opt-entrepreneurship" class="btn-press py-3.5 px-4 rounded-xl bg-white border-2 border-[#D9D9D9] hover:border-[#132535] text-[#132535] font-bold text-sm text-center transition flex flex-col items-center justify-center gap-1">
+          <span class="text-xs text-[#132535] font-black">STARTUP</span>
+          <span class="text-base font-bold">創業</span>
+        </button>
+      </div>
+
+      <!-- Result Feedback Box -->
+      <div id="quiz-feedback-box" class="hidden p-5 rounded-xl border-2 border-[#132535] bg-white mb-6">
+        <div class="flex items-center gap-2 font-black text-base mb-1.5" id="quiz-feedback-title">
+          <!-- 判定結果文字 -->
+        </div>
+        <p id="quiz-feedback-desc" class="text-sm font-medium text-[#132535]/80 leading-relaxed">
+          <!-- 簡短原因說明 -->
+        </p>
+      </div>
+
+      <!-- Nav Action Button -->
+      <div class="flex items-center justify-between pt-2">
+        <button onclick="goToStep(0)" class="text-xs font-bold text-[#132535]/60 hover:text-[#132535] transition flex items-center gap-1">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i> 回到首頁
+        </button>
+        <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="btn-press py-2.5 px-6 rounded-xl bg-[#F4C542] hover:bg-[#ebd532] text-[#132535] font-bold text-sm border border-[#132535] hidden items-center gap-1.5">
+          <span>下一題</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         STEP 2: 互動二：一個點子怎麼長大？
+    =========================================== -->
+    <section id="view-step-2" class="view-panel hidden fade-enter w-full max-w-4xl mx-auto">
+      <div class="text-center max-w-xl mx-auto mb-8">
+        <span class="px-2.5 py-0.5 rounded-full bg-[#2BA99B]/15 text-[#2BA99B] text-xs font-black mb-2 inline-block">互動二</span>
+        <h2 class="text-2xl sm:text-3xl font-black text-[#132535]">一個點子怎麼長大？</h2>
+        <p class="text-xs sm:text-sm text-[#132535]/70 mt-1">點擊下方每個節點，探索點子從「想法」到「進入市場」的蛻變路徑</p>
+      </div>
+
+      <!-- Interactive Journey Line (Desktop Horizontal / Mobile Vertical) -->
+      <div class="bg-white border border-[#D9D9D9] rounded-2xl p-4 sm:p-6 mb-6">
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-1 relative">
+          <!-- Journey Nodes -->
+          <div class="journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 transition text-center" id="j-node-0" onclick="selectJourneyNode(0)">
+            <span class="text-[10px] block font-mono text-[#132535]/50">01</span>
+            <span class="font-black text-sm text-[#132535]">IDEA</span>
+          </div>
+          <div class="text-center text-[#D9D9D9] font-black hidden md:block">→</div>
+          <div class="text-center text-[#D9D9D9] font-black md:hidden">↓</div>
+
+          <div class="journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 transition text-center" id="j-node-1" onclick="selectJourneyNode(1)">
+            <span class="text-[10px] block font-mono text-[#132535]/50">02</span>
+            <span class="font-black text-sm text-[#132535]">MAKE</span>
+          </div>
+          <div class="text-center text-[#D9D9D9] font-black hidden md:block">→</div>
+          <div class="text-center text-[#D9D9D9] font-black md:hidden">↓</div>
+
+          <div class="journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 transition text-center" id="j-node-2" onclick="selectJourneyNode(2)">
+            <span class="text-[10px] block font-mono text-[#132535]/50">03</span>
+            <span class="font-black text-sm text-[#132535]">TEST</span>
+          </div>
+          <div class="text-center text-[#D9D9D9] font-black hidden md:block">→</div>
+          <div class="text-center text-[#D9D9D9] font-black md:hidden">↓</div>
+
+          <div class="journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 transition text-center" id="j-node-3" onclick="selectJourneyNode(3)">
+            <span class="text-[10px] block font-mono text-[#132535]/50">04</span>
+            <span class="font-black text-sm text-[#132535]">INNOVATE</span>
+          </div>
+          <div class="text-center text-[#D9D9D9] font-black hidden md:block">→</div>
+          <div class="text-center text-[#D9D9D9] font-black md:hidden">↓</div>
+
+          <div class="journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 transition text-center" id="j-node-4" onclick="selectJourneyNode(4)">
+            <span class="text-[10px] block font-mono text-[#132535]/50">05</span>
+            <span class="font-black text-sm text-[#132535]">VALUE</span>
+          </div>
+          <div class="text-center text-[#D9D9D9] font-black hidden md:block">→</div>
+          <div class="text-center text-[#D9D9D9] font-black md:hidden">↓</div>
+
+          <div class="journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 transition text-center" id="j-node-5" onclick="selectJourneyNode(5)">
+            <span class="text-[10px] block font-mono text-[#132535]/50">06</span>
+            <span class="font-black text-xs sm:text-sm text-[#132535]">STARTUP</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node Detail Expanded Card -->
+      <div id="journey-detail-card" class="bg-white border-2 border-[#132535] rounded-2xl p-6 sm:p-8 mb-8 transition-all">
+        <div class="flex items-center justify-between border-b border-[#D9D9D9] pb-3 mb-4">
+          <div class="flex items-center gap-2">
+            <span id="journey-step-badge" class="px-2.5 py-0.5 rounded-full bg-[#132535] text-white text-xs font-black">STEP 01</span>
+            <h3 id="journey-step-title" class="text-xl sm:text-2xl font-black text-[#132535]">IDEA</h3>
+          </div>
+          <span class="text-xs text-[#132535]/60 font-bold">點擊節點切換</span>
+        </div>
+        <p id="journey-step-desc" class="text-base sm:text-lg text-[#132535] leading-relaxed font-medium">
+          發現問題，產生想法。
+        </p>
+      </div>
+
+      <!-- Completed Takeaway Banner -->
+      <div class="bg-[#2BA99B]/10 border border-[#2BA99B]/40 rounded-2xl p-5 mb-8 text-center space-y-1">
+        <p class="text-xs sm:text-sm font-bold text-[#2BA99B] tracking-wide">
+          Maker makes ideas real. · Innovation makes ideas better. · Entrepreneurship makes ideas valuable.
+        </p>
+        <p class="text-xs text-[#132535]/70">
+          創客把想法做出來 ➔ 創新讓解法變得更好 ➔ 創業讓價值真正走進人們生活
+        </p>
+      </div>
+
+      <!-- Navigation Next Button -->
+      <div class="flex items-center justify-between">
+        <button onclick="goToStep(1)" class="text-xs font-bold text-[#132535]/60 hover:text-[#132535] transition flex items-center gap-1">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i> 回上一動
+        </button>
+        <button onclick="goToStep(3)" class="btn-press py-3 px-6 rounded-xl bg-[#F4C542] hover:bg-[#ebd532] text-[#132535] font-black text-sm border-2 border-[#132535] flex items-center gap-2">
+          <span>進入實戰：MAKER CHALLENGE</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         STEP 3: 互動三：MAKER CHALLENGE 抽卡機
+    =========================================== -->
+    <section id="view-step-3" class="view-panel hidden fade-enter w-full max-w-3xl mx-auto">
+      <div class="text-center max-w-xl mx-auto mb-6">
+        <span class="px-2.5 py-0.5 rounded-full bg-[#F4C542]/30 text-[#132535] text-xs font-black mb-2 inline-block">互動三</span>
+        <h2 class="text-3xl sm:text-4xl font-black text-[#132535]">MAKER CHALLENGE</h2>
+        <p class="text-base font-bold text-[#132535] mt-2">
+          「你有 15 分鐘，把一個問題變成一個 Prototype。」
+        </p>
+      </div>
+
+      <!-- Action: Draw Button (Before drawn) -->
+      <div id="draw-trigger-container" class="flex flex-col items-center justify-center my-6">
+        <button onclick="shuffleAndDraw()" id="btn-start-draw" class="btn-press py-4 px-10 rounded-2xl bg-[#F4C542] hover:bg-[#ebd532] text-[#132535] font-black text-lg border-2 border-[#132535] shadow-sm flex items-center gap-2">
+          <i data-lucide="shuffle" class="w-5 h-5"></i>
+          <span>抽取我的挑戰</span>
+        </button>
+        <p class="text-xs text-[#132535]/60 mt-3">點擊抽取「使用者 × 生活痛點 × 製作限制」</p>
+      </div>
+
+      <!-- 3 Challenge Cards Grid -->
+      <div id="challenge-cards-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+        <!-- Card 1: WHO -->
+        <div id="card-who" class="bg-white border-2 border-[#132535] rounded-2xl p-5 flex flex-col justify-between min-h-[160px] shadow-sm transition">
+          <div class="flex items-center justify-between text-xs text-[#132535]/60 font-bold mb-2">
+            <span>WHO</span>
+            <span>使用者</span>
+          </div>
+          <div class="my-auto text-center py-2">
+            <span id="text-who" class="text-2xl font-black text-[#132535] block">
+              ？
+            </span>
+          </div>
+          <div class="text-[11px] text-[#132535]/50 border-t border-[#D9D9D9] pt-2 text-center">
+            為特定對象設身處地
+          </div>
+        </div>
+
+        <!-- Card 2: PROBLEM -->
+        <div id="card-problem" class="bg-white border-2 border-[#132535] rounded-2xl p-5 flex flex-col justify-between min-h-[160px] shadow-sm transition">
+          <div class="flex items-center justify-between text-xs text-[#132535]/60 font-bold mb-2">
+            <span>PROBLEM</span>
+            <span>生活痛點</span>
+          </div>
+          <div class="my-auto text-center py-2">
+            <span id="text-problem" class="text-xl font-black text-[#132535] block">
+              ？
+            </span>
+          </div>
+          <div class="text-[11px] text-[#132535]/50 border-t border-[#D9D9D9] pt-2 text-center">
+            聚焦要解決的核心問題
+          </div>
+        </div>
+
+        <!-- Card 3: LIMIT -->
+        <div id="card-limit" class="bg-white border-2 border-[#132535] rounded-2xl p-5 flex flex-col justify-between min-h-[160px] shadow-sm transition">
+          <div class="flex items-center justify-between text-xs text-[#132535]/60 font-bold mb-2">
+            <span>LIMIT</span>
+            <span>設計限制</span>
+          </div>
+          <div class="my-auto text-center py-2">
+            <span id="text-limit" class="text-xl font-black text-[#2BA99B] block">
+              ？
+            </span>
+          </div>
+          <div class="text-[11px] text-[#132535]/50 border-t border-[#D9D9D9] pt-2 text-center">
+            激發創新解法的限制條件
+          </div>
+        </div>
+      </div>
+
+      <!-- Post-Draw Action & Accept Area -->
+      <div id="post-draw-actions" class="hidden flex-col items-center justify-center text-center space-y-4 pt-2">
+        <p class="text-lg font-bold text-[#132535]">
+          「你能為他做出什麼？」
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <button onclick="acceptChallenge()" class="btn-press py-3 px-8 rounded-xl bg-[#2BA99B] hover:bg-[#259487] text-white font-black text-sm border-2 border-[#132535] flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>ACCEPT CHALLENGE</span>
+          </button>
+
+          <!-- Reroll Button (Allowed only once) -->
+          <button id="btn-reroll" onclick="rerollChallenge()" class="btn-press py-3 px-5 rounded-xl bg-white hover:bg-slate-100 text-[#132535] font-bold text-sm border-2 border-[#132535] flex items-center gap-1.5">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+            <span id="reroll-btn-text">↻ 重抽一次</span>
+          </button>
+        </div>
+        <p id="reroll-note" class="text-xs text-[#132535]/50">
+          注意：每次 Challenge 只能重抽一次。
+        </p>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         STEP 4: 15分鐘 Prototype Timer
+    =========================================== -->
+    <section id="view-step-4" class="view-panel hidden fade-enter w-full max-w-3xl mx-auto flex flex-col items-center">
+      
+      <!-- Current Challenge Reminder Pill -->
+      <div class="w-full bg-white border-2 border-[#132535] rounded-2xl p-4 mb-6">
+        <div class="flex items-center justify-between border-b border-[#D9D9D9] pb-2 mb-2 text-xs font-bold text-[#132535]">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="target" class="w-4 h-4 text-[#F4C542]"></i> 本次任務目標
+          </span>
+          <span class="text-[#2BA99B]">MAKER CHALLENGE</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-[#132535]">
+          <div><strong class="text-[#132535]/60">WHO：</strong><span id="timer-remind-who" class="font-bold">長輩</span></div>
+          <div><strong class="text-[#132535]/60">PROBLEM：</strong><span id="timer-remind-problem" class="font-bold">看影片手機不好固定</span></div>
+          <div><strong class="text-[#132535]/60">LIMIT：</strong><span id="timer-remind-limit" class="font-bold text-[#2BA99B]">只能單手操作</span></div>
+        </div>
+      </div>
+
+      <!-- Guiding 4-Step Chain -->
+      <div class="text-xs font-mono font-bold text-[#132535]/70 flex items-center gap-2 mb-4 bg-white px-4 py-1.5 rounded-full border border-[#D9D9D9]">
+        <span>WHO</span>
+        <span>→</span>
+        <span>PROBLEM</span>
+        <span>→</span>
+        <span>SOLUTION</span>
+        <span>→</span>
+        <span>VALUE</span>
+      </div>
+
+      <!-- Massive Big Countdown Clock -->
+      <div class="text-center my-2">
+        <div id="countdown-display" class="text-7xl sm:text-9xl font-black font-mono tracking-tighter text-[#132535] leading-none">
+          15:00
+        </div>
+        <div id="timer-state-title" class="text-lg sm:text-xl font-black text-[#2BA99B] mt-3 tracking-wider">
+          START MAKING!
+        </div>
+      </div>
+
+      <!-- Dynamic Stage Hint Box -->
+      <div id="dynamic-hint-box" class="w-full bg-[#F4C542]/20 border-2 border-[#F4C542] rounded-2xl p-4 my-6 text-center">
+        <p id="dynamic-hint-text" class="text-base sm:text-lg font-bold text-[#132535]">
+          「動手做！用紙板、吸管、膠帶快速把想法立起來。」
+        </p>
+      </div>
+
+      <!-- Timer Controls -->
+      <div class="flex flex-wrap items-center justify-center gap-2 mb-6">
+        <button id="timer-toggle-btn" onclick="toggleTimer()" class="btn-press py-3 px-6 rounded-xl bg-[#2BA99B] text-white font-black text-sm border-2 border-[#132535] flex items-center gap-2">
+          <i data-lucide="play" id="timer-btn-icon" class="w-4 h-4"></i>
+          <span id="timer-btn-text">開始</span>
+        </button>
+
+        <button onclick="resetTimer(15)" class="btn-press py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-[#132535] font-bold text-sm border-2 border-[#D9D9D9] flex items-center gap-1.5">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          <span>重新計時</span>
+        </button>
+
+        <!-- Quick 1-Min for Demo in Class -->
+        <button onclick="resetTimer(1)" class="btn-press py-3 px-3 rounded-xl bg-white hover:bg-slate-100 text-[#132535]/60 font-mono text-xs border border-[#D9D9D9]" title="課堂示範或測試用 1 分鐘">
+          1m 示範
+        </button>
+      </div>
+
+      <!-- Complete Time's Up Action Button (Appears when 00:00 or user done early) -->
+      <div id="timer-finish-action" class="w-full flex justify-center pt-2">
+        <button onclick="goToStep(5)" class="btn-press py-3.5 px-8 rounded-2xl bg-[#F4C542] hover:bg-[#ebd532] text-[#132535] font-black text-base border-2 border-[#132535] flex items-center gap-2">
+          <span>完成！我要發表 →</span>
+          <i data-lucide="mic" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         STEP 5: 60 SECOND PITCH
+    =========================================== -->
+    <section id="view-step-5" class="view-panel hidden fade-enter w-full max-w-2xl mx-auto">
+      <div class="text-center max-w-lg mx-auto mb-6">
+        <span class="px-2.5 py-0.5 rounded-full bg-[#F4C542]/30 text-[#132535] text-xs font-black mb-2 inline-block">極簡發表</span>
+        <h2 class="text-3xl sm:text-4xl font-black text-[#132535]">60 SECOND PITCH</h2>
+        <p class="text-xs sm:text-sm text-[#132535]/70 mt-1">拿著你的 Prototype，站在台上用四句話說出核心價值</p>
+      </div>
+
+      <!-- 4 Lines Prompt Teleprompter Card -->
+      <div class="bg-white border-2 border-[#132535] rounded-2xl p-6 sm:p-8 space-y-4 shadow-sm mb-6">
+        <!-- Line 1 -->
+        <div class="flex items-start gap-2 text-base sm:text-lg font-bold text-[#132535]">
+          <span class="text-[#2BA99B] font-mono shrink-0">01.</span>
+          <p class="leading-snug">
+            「我們為 <span id="pitch-who" class="text-[#2BA99B] underline decoration-[#2BA99B] underline-offset-4 decoration-2">＿＿＿＿</span> 設計。」
+          </p>
+        </div>
+
+        <!-- Line 2 -->
+        <div class="flex items-start gap-2 text-base sm:text-lg font-bold text-[#132535]">
+          <span class="text-[#2BA99B] font-mono shrink-0">02.</span>
+          <p class="leading-snug">
+            「我們發現 <span id="pitch-problem" class="text-[#2BA99B] underline decoration-[#2BA99B] underline-offset-4 decoration-2">＿＿＿＿</span> 的問題。」
+          </p>
+        </div>
+
+        <!-- Line 3 -->
+        <div class="flex items-start gap-2 text-base sm:text-lg font-bold text-[#132535]">
+          <span class="text-[#F4C542] font-mono shrink-0">03.</span>
+          <div class="flex-1">
+            <p class="leading-snug">
+              「所以我們做了 <input type="text" id="pitch-input-solution" placeholder="（填入你的 Prototype 名稱或解法）" class="bg-[#F7F6F2] border-b-2 border-[#132535] px-2 py-0.5 text-sm sm:text-base font-bold text-[#132535] w-full max-w-xs focus:outline-none focus:border-[#2BA99B]">。」
+            </p>
+          </div>
+        </div>
+
+        <!-- Line 4 -->
+        <div class="flex items-start gap-2 text-base sm:text-lg font-bold text-[#132535]">
+          <span class="text-[#F4C542] font-mono shrink-0">04.</span>
+          <div class="flex-1">
+            <p class="leading-snug">
+              「它最大的價值是 <input type="text" id="pitch-input-value" placeholder="（為他解決了什麼關鍵麻煩？）" class="bg-[#F7F6F2] border-b-2 border-[#132535] px-2 py-0.5 text-sm sm:text-base font-bold text-[#132535] w-full max-w-xs focus:outline-none focus:border-[#2BA99B]">。」
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pitch 60s Timer & Action -->
+      <div class="flex flex-col items-center justify-center p-6 bg-white border border-[#D9D9D9] rounded-2xl mb-6">
+        <div class="text-5xl sm:text-6xl font-black font-mono text-[#132535] mb-4" id="pitch-timer-display">
+          01:00
+        </div>
+        <div class="flex gap-2">
+          <button id="btn-pitch-start" onclick="togglePitchTimer()" class="btn-press py-3 px-8 rounded-xl bg-[#F4C542] hover:bg-[#ebd532] text-[#132535] font-black text-sm border-2 border-[#132535] flex items-center gap-2">
+            <i data-lucide="play" id="pitch-btn-icon" class="w-4 h-4"></i>
+            <span id="pitch-btn-text">START PITCH</span>
+          </button>
+          <button onclick="resetPitchTimer()" class="btn-press py-3 px-4 rounded-xl bg-white hover:bg-slate-100 text-[#132535] font-bold text-sm border border-[#D9D9D9]">
+            重設 60s
+          </button>
+        </div>
+        <div id="pitch-celebrate-text" class="hidden text-xl font-black text-[#2BA99B] mt-4">
+          🎉 GREAT JOB!
+        </div>
+      </div>
+
+      <!-- Action Next to Ending -->
+      <div class="flex justify-between items-center">
+        <button onclick="goToStep(4)" class="text-xs font-bold text-[#132535]/60 hover:text-[#132535] transition flex items-center gap-1">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i> 回到製作計時
+        </button>
+        <button onclick="goToStep(6)" class="btn-press py-3 px-6 rounded-xl bg-[#132535] text-white font-bold text-sm flex items-center gap-1.5">
+          <span>查看課堂總結</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         STEP 6: ENDING 總結收尾
+    =========================================== -->
+    <section id="view-step-6" class="view-panel hidden fade-enter w-full max-w-3xl mx-auto text-center">
+      
+      <!-- Recap Title -->
+      <div class="mb-8">
+        <span class="px-3 py-1 rounded-full bg-[#132535]/5 text-[#132535] text-xs font-black tracking-widest uppercase mb-3 inline-block border border-[#D9D9D9]">
+          COURSE SUMMARY
+        </span>
+        <h2 class="text-2xl sm:text-3xl font-black text-[#132535]">
+          今天，你走過了完整的創新旅程
+        </h2>
+      </div>
+
+      <!-- Re-display Full Journey Pipeline -->
+      <div class="bg-white border border-[#D9D9D9] rounded-2xl p-5 mb-8">
+        <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm font-black text-[#132535]">
+          <span class="px-3 py-1 rounded-lg bg-[#F7F6F2] border border-[#D9D9D9]">PROBLEM</span>
+          <span class="text-[#D9D9D9]">↓</span>
+          <span class="px-3 py-1 rounded-lg bg-[#F7F6F2] border border-[#D9D9D9]">IDEA</span>
+          <span class="text-[#D9D9D9]">↓</span>
+          <span class="px-3 py-1 rounded-lg bg-[#F7F6F2] border border-[#D9D9D9]">MAKE</span>
+          <span class="text-[#D9D9D9]">↓</span>
+          <span class="px-3 py-1 rounded-lg bg-[#F7F6F2] border border-[#D9D9D9]">TEST</span>
+          <span class="text-[#D9D9D9]">↓</span>
+          <span class="px-3 py-1 rounded-lg bg-[#F7F6F2] border border-[#D9D9D9]">INNOVATE</span>
+          <span class="text-[#D9D9D9]">↓</span>
+          <span class="px-3 py-1 rounded-lg bg-[#F7F6F2] border border-[#D9D9D9]">VALUE</span>
+        </div>
+      </div>
+
+      <!-- 3 Clean Definition Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 text-left">
+        <div class="bg-white border-2 border-[#132535] rounded-2xl p-5">
+          <span class="text-xs font-black text-[#2BA99B] tracking-wider block mb-1">MAKER</span>
+          <h4 class="text-lg font-black text-[#132535] mb-2">「把想法做出來」</h4>
+          <p class="text-xs text-[#132535]/70 leading-relaxed">
+            不再只是被動的消費者與空想者，而是親手用手邊材料將構想轉化為實體。
+          </p>
+        </div>
+
+        <div class="bg-white border-2 border-[#132535] rounded-2xl p-5">
+          <span class="text-xs font-black text-[#F4C542] tracking-wider block mb-1">INNOVATION</span>
+          <h4 class="text-lg font-black text-[#132535] mb-2">「讓解決方法更好」</h4>
+          <p class="text-xs text-[#132535]/70 leading-relaxed">
+            發現特定使用者的痛處，用巧妙的機構與思維，真正把問題解決得更漂亮。
+          </p>
+        </div>
+
+        <div class="bg-white border-2 border-[#132535] rounded-2xl p-5">
+          <span class="text-xs font-black text-[#132535] tracking-wider block mb-1">ENTREPRENEURSHIP</span>
+          <h4 class="text-lg font-black text-[#132535] mb-2">「讓價值走進生活」</h4>
+          <p class="text-xs text-[#132535]/70 leading-relaxed">
+            創業不只是開公司，而是讓解決方案產生持續性，真正融入真實世界造福人群。
+          </p>
+        </div>
+      </div>
+
+      <!-- The Core Golden Statement -->
+      <div class="p-8 sm:p-12 rounded-2xl bg-white border-2 border-[#132535] shadow-sm mb-8">
+        <p class="text-xs font-black uppercase tracking-widest text-[#132535]/50 mb-3">CORE TAKEAWAY</p>
+        <h3 class="text-3xl sm:text-5xl font-black text-[#132535] tracking-tight leading-tight">
+          「做出來，只是第一步。」
+        </h3>
+        <p class="text-sm sm:text-base text-[#132535]/80 mt-4 max-w-lg mx-auto leading-relaxed">
+          不是每一個創客都需要創業，<br>
+          但創客精神絕對是創新創業最重要的起點。
+        </p>
+      </div>
+
+      <!-- Action: Replay Workshop -->
+      <div class="flex justify-center gap-3">
+        <button onclick="goToStep(0)" class="btn-press py-3.5 px-8 rounded-xl bg-[#F4C542] hover:bg-[#ebd532] text-[#132535] font-black text-sm border-2 border-[#132535] flex items-center gap-2">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          <span>重新體驗實驗室</span>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Clean Footer -->
+  <footer class="w-full border-t border-[#D9D9D9] py-4 px-4 text-center text-xs text-[#132535]/60 bg-[#F7F6F2]">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <span>MAKE IT! 創客 × 創新 × 創業互動實驗室 · 課堂互動教具</span>
+      <span class="font-mono text-[11px]">Problem → Idea → Make → Test → Innovate → Value</span>
+    </div>
+  </footer>
+
+  <!-- Application Logic Script -->
+  <script>
+    /* ==========================================================
+       1. GLOBAL STATE & NAVIGATION
+    ========================================================== */
+    let currentStep = 0; // 0: Start, 1: Quiz, 2: Journey, 3: Challenge, 4: Timer, 5: Pitch, 6: Ending
+
+    function goToStep(stepIndex) {
+      currentStep = stepIndex;
+      for (let i = 0; i <= 6; i++) {
+        const view = document.getElementById(`view-step-${i}`);
+        const navBtn = document.getElementById(`nav-btn-${i}`);
+        if (view) {
+          if (i === stepIndex) {
+            view.classList.remove('hidden');
+          } else {
+            view.classList.add('hidden');
+          }
+        }
+        if (navBtn) {
+          if (i === stepIndex) {
+            navBtn.className = "px-2.5 py-1.5 rounded-lg border-2 border-[#132535] bg-[#132535] text-white font-bold transition";
+          } else {
+            navBtn.className = "px-2.5 py-1.5 rounded-lg border border-transparent hover:border-[#D9D9D9] text-[#132535]/70 hover:text-[#132535] transition font-bold";
+          }
+        }
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      lucide.createIcons();
+    }
+
+    /* ==========================================================
+       2. INTERACTION 1: 這算什麼？ (QUIZ LOGIC)
+    ========================================================== */
+    const quizData = [
+      {
+        q: "「用 3D 列印做出自己設計的手機架。」",
+        correct: "maker",
+        badge: "創客 Maker",
+        desc: "因為你動手把腦袋中的想法轉化為實體造物（Prototype）。做出來 ＝ 創客。"
+      },
+      {
+        q: "「發現長輩操作手機架不方便，因此重新設計成可以單手使用。」",
+        correct: "innovation",
+        badge: "創新 Innovation",
+        desc: "焦點轉向特定使用者的痛點，並用更好的機構與解法解決問題。做得更好 ＝ 創新。"
+      },
+      {
+        q: "「把改良後的手機架放到募資平台，測試是否有人願意購買。」",
+        correct: "entrepreneurship",
+        badge: "創業 Entrepreneurship",
+        desc: "開始進入市場與受眾進行價值交換，測試可持續性。創造持續價值 ＝ 創業。"
+      },
+      {
+        q: "「利用 NFC 製作一個感應手機就能開啟網站的吊飾。」",
+        correct: "maker",
+        badge: "創客 Maker",
+        desc: "利用現成技術與工具動手實現某個特定功能，屬於動手實作（Make）階段。"
+      },
+      {
+        q: "「發現長輩容易忘記緊急聯絡方式，因此將 NFC 吊飾改成緊急聯絡卡，並思考與社區合作推廣。」",
+        correct: "all",
+        badge: "創客 ＋ 創新 ＋ 創業",
+        desc: "💡 在真實世界中，Maker、Innovation 與 Entrepreneurship 並不是完全割裂的！從動手做到解決痛點，再到進入社會推廣，這是一條完整且互相交融的價值光譜。"
+      }
+    ];
+
+    let currentQuizIndex = 0;
+    let quizAnswered = false;
+
+    function renderQuizQuestion() {
+      quizAnswered = false;
+      const data = quizData[currentQuizIndex];
+      document.getElementById('quiz-progress-text').innerText = `${currentQuizIndex + 1} / ${quizData.length}`;
+      document.getElementById('quiz-question-text').innerText = data.q;
+
+      // Reset options styling
+      ['maker', 'innovation', 'entrepreneurship'].forEach(opt => {
+        const btn = document.getElementById(`btn-opt-${opt}`);
+        btn.className = "btn-press py-3.5 px-4 rounded-xl bg-white border-2 border-[#D9D9D9] hover:border-[#132535] text-[#132535] font-bold text-sm text-center transition flex flex-col items-center justify-center gap-1";
+      });
+
+      // Hide feedback and next button
+      document.getElementById('quiz-feedback-box').classList.add('hidden');
+      document.getElementById('quiz-next-btn').classList.add('hidden');
+      document.getElementById('quiz-next-btn').classList.remove('flex');
+    }
+
+    function handleAnswer(selected) {
+      if (quizAnswered) return;
+      quizAnswered = true;
+
+      const data = quizData[currentQuizIndex];
+      const feedbackBox = document.getElementById('quiz-feedback-box');
+      const feedbackTitle = document.getElementById('quiz-feedback-title');
+      const feedbackDesc = document.getElementById('quiz-feedback-desc');
+      const nextBtn = document.getElementById('quiz-next-btn');
+
+      const isCorrect = (data.correct === 'all') || (selected === data.correct);
+
+      // Highlight clicked option
+      const chosenBtn = document.getElementById(`btn-opt-${selected}`);
+      if (isCorrect) {
+        chosenBtn.className = "btn-press py-3.5 px-4 rounded-xl bg-[#2BA99B]/10 border-2 border-[#2BA99B] text-[#132535] font-bold text-sm text-center flex flex-col items-center justify-center gap-1";
+      } else {
+        chosenBtn.className = "btn-press py-3.5 px-4 rounded-xl bg-rose-50 border-2 border-rose-300 text-[#132535] font-bold text-sm text-center flex flex-col items-center justify-center gap-1";
+      }
+
+      feedbackTitle.innerHTML = `
+        <span class="inline-block px-2 py-0.5 rounded bg-[#132535] text-white text-xs font-bold font-mono">答案</span>
+        <span class="text-[#132535]">${data.badge}</span>
+      `;
+      feedbackDesc.innerText = data.desc;
+      feedbackBox.classList.remove('hidden');
+
+      // Show Next or Finish
+      nextBtn.classList.remove('hidden');
+      nextBtn.classList.add('flex');
+      if (currentQuizIndex === quizData.length - 1) {
+        nextBtn.innerHTML = `<span>前往點子成長記</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+      } else {
+        nextBtn.innerHTML = `<span>下一題</span><i data-lucide="arrow-right" class="w-4 h-4"></i>`;
+      }
+      lucide.createIcons();
+    }
+
+    function nextQuizQuestion() {
+      if (currentQuizIndex < quizData.length - 1) {
+        currentQuizIndex++;
+        renderQuizQuestion();
+      } else {
+        goToStep(2); // Go to Journey
+      }
+    }
+
+    /* ==========================================================
+       3. INTERACTION 2: 一個點子怎麼長大？ (JOURNEY LOGIC)
+    ========================================================== */
+    const journeyData = [
+      {
+        badge: "STEP 01",
+        title: "IDEA",
+        desc: "發現生活中的微小不便與問題，產生初步想法。問問自己：「如果有一種東西能解決這個麻煩，那會是什麼？」"
+      },
+      {
+        badge: "STEP 02",
+        title: "MAKE",
+        desc: "把想法做出來。不需要一開始就是完美產品！草圖、瓦楞紙板、積木、黏土或 3D 列印都可以成為 Prototype。"
+      },
+      {
+        badge: "STEP 03",
+        title: "TEST",
+        desc: "不要藏在家裡自我陶醉。讓別人實際動手使用看看，觀察哪裡卡住、哪裡不順手，直面第一手回饋與失敗。"
+      },
+      {
+        badge: "STEP 04",
+        title: "INNOVATE",
+        desc: "不是貼上「新」字就叫創新。真正重要的是有沒有用更好的機構、流程或材料，解決了使用者真實的痛苦。"
+      },
+      {
+        badge: "STEP 05",
+        title: "VALUE",
+        desc: "思考這個解決方案到底對誰有幫助？它創造了什麼實質價值？省時？省力？安心？還是帶來了生活樂趣？"
+      },
+      {
+        badge: "STEP 06",
+        title: "ENTREPRENEURSHIP",
+        desc: "創業不只是成立公司或登記營業。當你開始思考「誰最需要它？」、「如何讓這份價值持續運轉與擴大？」時，就已經進入了創新創業思維！"
+      }
+    ];
+
+    function selectJourneyNode(idx) {
+      for (let i = 0; i < 6; i++) {
+        const node = document.getElementById(`j-node-${i}`);
+        if (i === idx) {
+          node.className = "journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 border-[#132535] bg-[#F4C542] shadow-sm transition text-center scale-[1.02]";
+        } else {
+          node.className = "journey-node-btn cursor-pointer flex-1 p-3 rounded-xl border-2 border-transparent bg-white hover:border-[#D9D9D9] transition text-center";
+        }
+      }
+      const item = journeyData[idx];
+      document.getElementById('journey-step-badge').innerText = item.badge;
+      document.getElementById('journey-step-title').innerText = item.title;
+      document.getElementById('journey-step-desc').innerText = item.desc;
+    }
+
+    /* ==========================================================
+       4. INTERACTION 3: MAKER CHALLENGE (SHUFFLE & DRAW)
+    ========================================================== */
+    const whoPool = ["長輩", "小朋友", "學生", "上班族", "旅客", "行動不便者"];
+    const problemPool = [
+      "看影片時手機不好固定",
+      "充電線常常掉到桌子下面",
+      "下雨天濕雨傘不知道放哪裡",
+      "杯子容易被打翻",
+      "出門常常忘記重要物品",
+      "常常忘記今天有沒有完成某件事情",
+      "線材容易纏在一起",
+      "桌面物品容易凌亂"
+    ];
+    const limitPool = [
+      "只能單手操作",
+      "成本必須很低",
+      "必須使用回收材料",
+      "必須可以收納",
+      "不看說明書也要會使用",
+      "必須方便攜帶"
+    ];
+
+    let currentWho = "";
+    let currentProblem = "";
+    let currentLimit = "";
+    let rerollCount = 0; // max 1 reroll
+
+    function shuffleAndDraw() {
+      const cardWho = document.getElementById('card-who');
+      const cardProblem = document.getElementById('card-problem');
+      const cardLimit = document.getElementById('card-limit');
+      const textWho = document.getElementById('text-who');
+      const textProblem = document.getElementById('text-problem');
+      const textLimit = document.getElementById('text-limit');
+
+      // Add shuffle animation class
+      cardWho.classList.add('shuffling');
+      cardProblem.classList.add('shuffling');
+      cardLimit.classList.add('shuffling');
+
+      let timerCount = 0;
+      const interval = setInterval(() => {
+        textWho.innerText = whoPool[Math.floor(Math.random() * whoPool.length)];
+        textProblem.innerText = problemPool[Math.floor(Math.random() * problemPool.length)];
+        textLimit.innerText = limitPool[Math.floor(Math.random() * limitPool.length)];
+        timerCount += 100;
+
+        if (timerCount >= 1000) {
+          clearInterval(interval);
+          cardWho.classList.remove('shuffling');
+          cardProblem.classList.remove('shuffling');
+          cardLimit.classList.remove('shuffling');
+
+          // Final draw
+          currentWho = whoPool[Math.floor(Math.random() * whoPool.length)];
+          currentProblem = problemPool[Math.floor(Math.random() * problemPool.length)];
+          currentLimit = limitPool[Math.floor(Math.random() * limitPool.length)];
+
+          textWho.innerText = currentWho;
+          textProblem.innerText = currentProblem;
+          textLimit.innerText = currentLimit;
+
+          // Show action area
+          document.getElementById('draw-trigger-container').classList.add('hidden');
+          document.getElementById('post-draw-actions').classList.remove('hidden');
+          document.getElementById('post-draw-actions').classList.add('flex');
+        }
+      }, 70);
+    }
+
+    function rerollChallenge() {
+      if (rerollCount >= 1) return;
+      rerollCount++;
+
+      // Disable button
+      const rerollBtn = document.getElementById('btn-reroll');
+      rerollBtn.disabled = true;
+      rerollBtn.className = "py-3 px-5 rounded-xl bg-[#D9D9D9] text-[#132535]/40 font-bold text-sm border-2 border-[#D9D9D9] cursor-not-allowed flex items-center gap-1.5";
+      document.getElementById('reroll-btn-text').innerText = "已重抽過 (停用)";
+      document.getElementById('reroll-note').innerText = "已達到重抽上限，請接受本次挑戰！";
+
+      shuffleAndDraw();
+    }
+
+    function acceptChallenge() {
+      // Sync values to Timer view and Pitch view
+      document.getElementById('timer-remind-who').innerText = currentWho;
+      document.getElementById('timer-remind-problem').innerText = currentProblem;
+      document.getElementById('timer-remind-limit').innerText = currentLimit;
+
+      document.getElementById('pitch-who').innerText = currentWho;
+      document.getElementById('pitch-problem').innerText = currentProblem;
+
+      goToStep(4); // Go to 15-min Timer
+    }
+
+    /* ==========================================================
+       5. 15-MINUTE PROTOTYPE TIMER LOGIC
+    ========================================================== */
+    let timerTotalSeconds = 15 * 60; // 900 seconds
+    let timerInterval = null;
+    let isTimerRunning = false;
+
+    const timerHints = [
+      { time: 12 * 60, text: "💡 先別追求完美，先讓想法看得見！用紙杯、吸管快速立出骨架。" },
+      { time: 8 * 60,  text: "🔍 停下 10 秒看一眼：你的設計真的有扣緊剛才的使用者與痛點嗎？" },
+      { time: 4 * 60,  text: "🧪 測試時刻：讓同組同學假裝第一次看到它，試用看看會不會卡住？" },
+      { time: 1 * 60,  text: "⚡ 最後 60 秒！放下剪刀膠帶，準備讓你的 Prototype 登場！" }
+    ];
+
+    function updateTimerUI() {
+      const mins = Math.floor(timerTotalSeconds / 60);
+      const secs = timerTotalSeconds % 60;
+      const display = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      document.getElementById('countdown-display').innerText = display;
+
+      // Update hints at specific threshold
+      if (timerTotalSeconds > 12 * 60) {
+        document.getElementById('dynamic-hint-text').innerText = "「動手做！用紙板、吸管、膠帶快速把想法立起來。」";
+      } else if (timerTotalSeconds <= 12 * 60 && timerTotalSeconds > 8 * 60) {
+        document.getElementById('dynamic-hint-text').innerText = "「先別追求完美，先讓想法看得見。」";
+      } else if (timerTotalSeconds <= 8 * 60 && timerTotalSeconds > 4 * 60) {
+        document.getElementById('dynamic-hint-text').innerText = "「你的設計真的有解決剛剛的問題嗎？」";
+      } else if (timerTotalSeconds <= 4 * 60 && timerTotalSeconds > 1 * 60) {
+        document.getElementById('dynamic-hint-text').innerText = "「讓組員假裝第一次使用它，試試看。」";
+      } else if (timerTotalSeconds <= 1 * 60 && timerTotalSeconds > 0) {
+        document.getElementById('dynamic-hint-text').innerText = "「最後60秒！準備讓你的Prototype登場。」";
+      }
+
+      if (timerTotalSeconds <= 0) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        document.getElementById('timer-state-title').innerText = "TIME'S UP!";
+        document.getElementById('timer-state-title').className = "text-xl sm:text-2xl font-black text-[#132535] mt-3 tracking-wider";
+        document.getElementById('dynamic-hint-box').className = "w-full bg-white border-2 border-[#132535] rounded-2xl p-4 my-6 text-center";
+        document.getElementById('dynamic-hint-text').innerHTML = `
+          <strong>作品不需要完美。</strong><br>
+          <span class="text-sm font-normal text-[#132535]/80">Prototype 存在的目的，就是讓我們知道下一次可以怎麼更好。</span>
+        `;
+        document.getElementById('timer-btn-text').innerText = "計時結束";
+        document.getElementById('timer-toggle-btn').disabled = true;
+      }
+    }
+
+    function toggleTimer() {
+      if (timerTotalSeconds <= 0) return;
+
+      if (!isTimerRunning) {
+        isTimerRunning = true;
+        document.getElementById('timer-btn-text').innerText = "暫停";
+        document.getElementById('timer-btn-icon').setAttribute('data-lucide', 'pause');
+        document.getElementById('timer-toggle-btn').className = "btn-press py-3 px-6 rounded-xl bg-amber-500 text-white font-black text-sm border-2 border-[#132535] flex items-center gap-2";
+
+        timerInterval = setInterval(() => {
+          if (timerTotalSeconds > 0) {
+            timerTotalSeconds--;
+            updateTimerUI();
+          }
+        }, 1000);
+      } else {
+        isTimerRunning = false;
+        clearInterval(timerInterval);
+        document.getElementById('timer-btn-text').innerText = "繼續";
+        document.getElementById('timer-btn-icon').setAttribute('data-lucide', 'play');
+        document.getElementById('timer-toggle-btn').className = "btn-press py-3 px-6 rounded-xl bg-[#2BA99B] text-white font-black text-sm border-2 border-[#132535] flex items-center gap-2";
+      }
+      lucide.createIcons();
+    }
+
+    function resetTimer(minutes = 15) {
+      clearInterval(timerInterval);
+      isTimerRunning = false;
+      timerTotalSeconds = minutes * 60;
+      document.getElementById('timer-toggle-btn').disabled = false;
+      document.getElementById('timer-btn-text').innerText = "開始";
+      document.getElementById('timer-btn-icon').setAttribute('data-lucide', 'play');
+      document.getElementById('timer-toggle-btn').className = "btn-press py-3 px-6 rounded-xl bg-[#2BA99B] text-white font-black text-sm border-2 border-[#132535] flex items-center gap-2";
+      document.getElementById('timer-state-title').innerText = "START MAKING!";
+      document.getElementById('timer-state-title').className = "text-lg sm:text-xl font-black text-[#2BA99B] mt-3 tracking-wider";
+      document.getElementById('dynamic-hint-box').className = "w-full bg-[#F4C542]/20 border-2 border-[#F4C542] rounded-2xl p-4 my-6 text-center";
+      updateTimerUI();
+      lucide.createIcons();
+    }
+
+    /* ==========================================================
+       6. 60 SECOND PITCH TIMER
+    ========================================================== */
+    let pitchSeconds = 60;
+    let pitchInterval = null;
+    let isPitchRunning = false;
+
+    function updatePitchUI() {
+      const display = `00:${String(pitchSeconds).padStart(2, '0')}`;
+      document.getElementById('pitch-timer-display').innerText = display;
+
+      if (pitchSeconds <= 0) {
+        clearInterval(pitchInterval);
+        isPitchRunning = false;
+        document.getElementById('pitch-btn-text').innerText = "發表完畢";
+        document.getElementById('btn-pitch-start').disabled = true;
+        document.getElementById('pitch-celebrate-text').classList.remove('hidden');
+      }
+    }
+
+    function togglePitchTimer() {
+      if (pitchSeconds <= 0) return;
+
+      if (!isPitchRunning) {
+        isPitchRunning = true;
+        document.getElementById('pitch-btn-text').innerText = "暫停";
+        document.getElementById('pitch-btn-icon').setAttribute('data-lucide', 'pause');
+        document.getElementById('pitch-celebrate-text').classList.add('hidden');
+
+        pitchInterval = setInterval(() => {
+          if (pitchSeconds > 0) {
+            pitchSeconds--;
+            updatePitchUI();
+          }
+        }, 1000);
+      } else {
+        isPitchRunning = false;
+        clearInterval(pitchInterval);
+        document.getElementById('pitch-btn-text').innerText = "繼續";
+        document.getElementById('pitch-btn-icon').setAttribute('data-lucide', 'play');
+      }
+      lucide.createIcons();
+    }
+
+    function resetPitchTimer() {
+      clearInterval(pitchInterval);
+      isPitchRunning = false;
+      pitchSeconds = 60;
+      document.getElementById('btn-pitch-start').disabled = false;
+      document.getElementById('pitch-btn-text').innerText = "START PITCH";
+      document.getElementById('pitch-btn-icon').setAttribute('data-lucide', 'play');
+      document.getElementById('pitch-celebrate-text').classList.add('hidden');
+      updatePitchUI();
+      lucide.createIcons();
+    }
+
+    /* ==========================================================
+       7. ONLOAD INITIALIZATION
+    ========================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      goToStep(0);
+      renderQuizQuestion();
+      selectJourneyNode(0);
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
